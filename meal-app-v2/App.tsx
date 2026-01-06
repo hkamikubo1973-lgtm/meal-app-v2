@@ -1,11 +1,42 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Text, View, StyleSheet } from 'react-native';
+
+import {
+  initDatabase,
+  getAllDailyRecords,
+  DailyRecord,
+} from './src/database/database';
+
+import { DailyRecordList } from './src/components/DailyRecordList';
 
 export default function App() {
+  const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [status, setStatus] = useState('起動中...');
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await initDatabase();
+
+        const data = await getAllDailyRecords();
+        setRecords(data);
+
+        setStatus('✅ データ読み込み成功');
+      } catch (error) {
+        console.error(error);
+        setStatus('❌ エラーが発生しました');
+      }
+    };
+
+    loadData();
+  }, []);
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
+      <Text style={styles.title}>日次記録一覧</Text>
+      <Text style={styles.status}>{status}</Text>
+
+      <DailyRecordList records={records} />
     </View>
   );
 }
@@ -13,8 +44,16 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: 40,
+  },
+  title: {
+    fontSize: 20,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  status: {
+    textAlign: 'center',
+    marginBottom: 12,
+    color: '#555',
   },
 });
