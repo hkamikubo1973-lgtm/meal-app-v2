@@ -1,90 +1,46 @@
-import * as SQLite from 'expo-sqlite';
+import * as SQLite from 'expo-sqlite'
+import { DailyRecord } from '../types/DailyRecord'
 
-/**
- * DBインスタンス（シングルトン）
- */
-let db: SQLite.SQLiteDatabase | null = null;
+const db = SQLite.openDatabase('records.db')
 
-/**
- * DailyRecord 型
- */
-export interface DailyRecord {
-  id?: number;
-  date: string;                 // YYYY-MM-DD
-  sales: number | null;
-  health_score: number | null;
-  memo: string | null;
-}
-
-/**
- * DB取得（未初期化ならエラー）
- */
-const getDb = (): SQLite.SQLiteDatabase => {
-  if (!db) {
-    throw new Error('Database not initialized');
-  }
-  return db;
-};
-
-/**
- * DB初期化 & テーブル作成
- */
-export const initDatabase = async (): Promise<void> => {
-  try {
-    db = await SQLite.openDatabaseAsync('meal.db');
-
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS shifts_table (
+export const initDatabase = async () => {
+  db.transaction((tx) => {
+    tx.executeSql(`
+      CREATE TABLE IF NOT EXISTS records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
-        type_id INTEGER NOT NULL
-      );
-    `);
-
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS daily_records_table (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL,
-        sales INTEGER,
-        health_score INTEGER,
+        sales INTEGER NOT NULL,
+        healthScore INTEGER NOT NULL,
         memo TEXT
       );
-    `);
+    `)
+  })
+}
 
-    console.log('✅ DB initialized');
-  } catch (error) {
-    console.error('❌ DB init error', error);
-    throw error;
-  }
-};
+export const addRecord = (record: Omit<DailyRecord, 'id'>) => {
+  return new Promise<void>((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `INSERT INTO records (date, sales, healthScore, memo) VALUES (?, ?, ?, ?)`,
+        [record.date, record.sales, record.healthScore, record.memo ?? null],
+        () => resolve(),
+        (_, err) => {
+          reject(err)
+          return false
+        }
+      )
+    })
+  })
+}
 
-/**
- * 日次レコード INSERT
- */
-export const insertDailyRecord = async (
-  record: Omit<DailyRecord, 'id'>
-): Promise<void> => {
-  const database = getDb();
-
-  await database.runAsync(
-    `INSERT INTO daily_records_table (date, sales, health_score, memo)
-     VALUES (?, ?, ?, ?)`,
-    record.date,
-    record.sales,
-    record.health_score,
-    record.memo
-  );
-};
-
-/**
- * 日次レコード 全件取得
- */
-export const getAllDailyRecords = async (): Promise<DailyRecord[]> => {
-  const database = getDb();
-
-  const rows = await database.getAllAsync<DailyRecord>(
-    `SELECT * FROM daily_records_table ORDER BY date DESC`
-  );
-
-  return rows;
-};
+export const getAllRecords = (): Promise<DailyRecord[]> => {
+  return new Promise((resolve) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `SELECT * FROM records ORDER BY date DESC`,
+        [],
+        (_, { rows }) => resolve(rows._array as DailyRecord[])
+      )
+    })
+  })
+}

@@ -1,59 +1,78 @@
-import { useEffect, useState } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, FlatList, Alert } from 'react-native'
 
-import {
-  initDatabase,
-  getAllDailyRecords,
-  DailyRecord,
-} from './src/database/database';
-
-import { DailyRecordList } from './src/components/DailyRecordList';
+import RecordInputForm from './src/components/RecordInputForm'
+import DailyRecordList from './src/components/DailyRecordList'
+import { initDatabase, addRecord, getAllRecords } from './src/database/database'
+import { exportMonthlyCsv } from './src/utils/exportCsv'
+import { DailyRecord } from './src/types/DailyRecord'
 
 export default function App() {
-  const [records, setRecords] = useState<DailyRecord[]>([]);
-  const [status, setStatus] = useState('起動中...');
+  const [records, setRecords] = useState<DailyRecord[]>([])
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        await initDatabase();
+    initDatabase().then(loadRecords)
+  }, [])
 
-        const data = await getAllDailyRecords();
-        setRecords(data);
+  const loadRecords = async () => {
+    const data = await getAllRecords()
+    setRecords(data)
+  }
 
-        setStatus('✅ データ読み込み成功');
-      } catch (error) {
-        console.error(error);
-        setStatus('❌ エラーが発生しました');
-      }
-    };
-
-    loadData();
-  }, []);
+  const handleSave = async (
+    sales: number,
+    healthScore: number,
+    memo?: string
+  ) => {
+    try {
+      await addRecord({
+        date: new Date().toISOString().slice(0, 10),
+        sales,
+        healthScore,
+        memo,
+      })
+      await loadRecords()
+    } catch (e: any) {
+      Alert.alert('保存エラー', e.message)
+    }
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>日次記録一覧</Text>
-      <Text style={styles.status}>{status}</Text>
+    <FlatList
+      data={records}
+      keyExtractor={(item) => item.id.toString()}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.title}>売上管理（Daily Record）</Text>
 
-      <DailyRecordList records={records} />
-    </View>
-  );
+          <RecordInputForm
+            onSave={handleSave}
+            month={month}
+            onChangeMonth={setMonth}
+            onExportCsv={async () => {
+              try {
+                await exportMonthlyCsv(month)
+                Alert.alert('CSV出力完了')
+              } catch {
+                Alert.alert('CSV出力エラー')
+              }
+            }}
+          />
+        </View>
+      }
+      renderItem={({ item }) => <DailyRecordList record={item} />}
+    />
+  )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 40,
+  header: {
+    padding: 16,
   },
   title: {
     fontSize: 20,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  status: {
-    textAlign: 'center',
+    fontWeight: 'bold',
     marginBottom: 12,
-    color: '#555',
   },
-});
+})
