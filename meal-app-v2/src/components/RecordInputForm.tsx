@@ -1,148 +1,116 @@
-import React, { useState } from 'react'
+// src/components/RecordInputForm.tsx
+import { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Button,
   StyleSheet,
-} from 'react-native'
+} from 'react-native';
+import { getDb } from '../database/database';
 
-type Props = {
-  onSave: (sales: number, healthScore: number, memo?: string) => void
-  month: string
-  onChangeMonth: (month: string) => void
-  onExportCsv: () => void
-}
+const TYPES = ['通常', '貸切', 'その他'] as const;
 
-export default function RecordInputForm({
-  onSave,
-  month,
-  onChangeMonth,
-  onExportCsv,
-}: Props) {
-  const [sales, setSales] = useState('')
-  const [healthScore, setHealthScore] = useState<number | null>(null)
-  const [memo, setMemo] = useState('')
+export default function RecordInputForm({ onSaved }: { onSaved?: () => void }) {
+  const [sales, setSales] = useState('');
+  const [type, setType] = useState<typeof TYPES[number]>('通常');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    if (healthScore === null) {
-      // ★ ここで必ず弾く（App.tsxに undefined を渡さない）
-      return
+  const saveRecord = async () => {
+    setError(null);
+
+    const amount = Number(sales);
+    if (!amount || amount <= 0) {
+      setError('売上を正しく入力してください');
+      return;
     }
 
-    onSave(
-      Number(sales || 0),
-      healthScore,
-      memo.trim() || undefined
-    )
+    const db = await getDb();
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 既存チェック（同日＋同種別）
+    const existing = await db.getAllAsync<{
+      id: number;
+    }>(
+      `SELECT id FROM records WHERE date = ? AND type = ? LIMIT 1`,
+      [today, type]
+    );
+
+    if (existing.length > 0) {
+      // UPDATE
+      await db.runAsync(
+        `UPDATE records SET sales = ? WHERE id = ?`,
+        [amount, existing[0].id]
+      );
+    } else {
+      // INSERT
+      await db.runAsync(
+        `INSERT INTO records (date, sales, type) VALUES (?, ?, ?)`,
+        [today, amount, type]
+      );
+    }
 
     // 入力リセット
-    setSales('')
-    setHealthScore(null)
-    setMemo('')
-  }
+    setSales('');
+    setType('通常');
+
+    onSaved?.();
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>売上</Text>
+      <Text style={styles.title}>売上入力</Text>
+
       <TextInput
         style={styles.input}
         keyboardType="numeric"
-        placeholder="例: 12000"
+        placeholder="売上金額"
         value={sales}
         onChangeText={setSales}
       />
 
-      <Text style={styles.label}>健康スコア</Text>
-      <View style={styles.starRow}>
-        {[1, 2, 3, 4, 5].map((v) => (
-          <TouchableOpacity
-            key={v}
-            style={[
-              styles.starButton,
-              healthScore === v && styles.starSelected,
-            ]}
-            onPress={() => setHealthScore(v)}
-          >
-            <Text>★{v}</Text>
-          </TouchableOpacity>
+      <View style={styles.typeRow}>
+        {TYPES.map((t) => (
+          <Button
+            key={t}
+            title={t}
+            onPress={() => setType(t)}
+            color={type === t ? '#007AFF' : '#999'}
+          />
         ))}
       </View>
 
-      <Text style={styles.label}>メモ</Text>
-      <TextInput
-        style={styles.memo}
-        multiline
-        value={memo}
-        onChangeText={setMemo}
-        placeholder="自由記入"
-      />
+      {error && <Text style={styles.error}>{error}</Text>}
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveText}>保存</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.csvButton} onPress={onExportCsv}>
-        <Text style={styles.csvText}>CSV出力（今月）</Text>
-      </TouchableOpacity>
+      <Button title="保存" onPress={saveRecord} />
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    padding: 16,
+    width: '100%',
   },
-  label: {
+  title: {
+    fontSize: 18,
+    marginBottom: 12,
     fontWeight: 'bold',
-    marginTop: 12,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 6,
+    borderColor: '#ccc',
     padding: 8,
-    marginTop: 4,
+    marginBottom: 12,
+    borderRadius: 4,
   },
-  memo: {
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 4,
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  starRow: {
+  typeRow: {
     flexDirection: 'row',
-    marginTop: 8,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  starButton: {
-    padding: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderRadius: 6,
+  error: {
+    color: 'red',
+    marginBottom: 8,
   },
-  starSelected: {
-    backgroundColor: '#ddd',
-  },
-  saveButton: {
-    marginTop: 16,
-    backgroundColor: '#1976d2',
-    padding: 12,
-    borderRadius: 6,
-  },
-  saveText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  csvButton: {
-    marginTop: 12,
-    backgroundColor: '#555',
-    padding: 12,
-    borderRadius: 6,
-  },
-  csvText: {
-    color: '#fff',
-    textAlign: 'center',
-  },
-})
+});
