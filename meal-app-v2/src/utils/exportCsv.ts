@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { getDb } from '../database/database';
 
@@ -42,12 +42,9 @@ export const exportRecordsCsv = async () => {
   ];
 
   const csv = csvLines.join('\n');
-
   const fileUri = FileSystem.documentDirectory + 'records.csv';
 
-  await FileSystem.writeAsStringAsync(fileUri, csv, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  await FileSystem.writeAsStringAsync(fileUri, csv);
 
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(fileUri, {

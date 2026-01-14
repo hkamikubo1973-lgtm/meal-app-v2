@@ -1,49 +1,29 @@
-// App.tsx（④対応・フル）
-import { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { initDatabase } from './src/database/database';
+// App.tsx
+import React from 'react';
+import { SafeAreaView, ScrollView } from 'react-native';
+
 import RecordInputForm from './src/components/RecordInputForm';
-import TodayRecordList from './src/components/TodayRecordList';
 import TodayTotal from './src/components/TodayTotal';
-import ExportCsvButton from './src/components/ExportCsvButton';
+import TodayRecordList from './src/components/TodayRecordList';
+import { ActionCard } from './src/components/ActionCard';
+import { useActionCard } from './src/hooks/useActionCard';
 
 export default function App() {
-  const [dbReady, setDbReady] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    (async () => {
-      await initDatabase();
-      setDbReady(true);
-    })();
-  }, []);
-
-  if (!dbReady) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  const actionCard = useActionCard();
 
   return (
-    <View style={styles.container}>
-      <RecordInputForm onSaved={() => setRefreshKey((k) => k + 1)} />
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView>
 
-      <TodayTotal refreshKey={refreshKey} />
+        {/* 🔵 Action Card（条件に合うときだけ1枚表示） */}
+        {actionCard && <ActionCard card={actionCard} />}
 
-      <ExportCsvButton />
+        {/* 既存UI（順番はそのまま） */}
+        <RecordInputForm />
+        <TodayTotal />
+        <TodayRecordList />
 
-      <TodayRecordList refreshKey={refreshKey} />
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
