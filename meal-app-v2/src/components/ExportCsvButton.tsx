@@ -1,25 +1,29 @@
-import { View, Button, StyleSheet, Alert } from 'react-native';
+import { View, Button, Alert } from 'react-native';
 import { exportRecordsCsv } from '../utils/exportCsv';
 
 export default function ExportCsvButton() {
-  const onPress = async () => {
+  const handle = async (period: 'all' | 'thisMonth' | 'lastMonth') => {
     try {
-      await exportRecordsCsv();
-    } catch (e) {
-      console.error(e);
-      Alert.alert('エラー', 'CSV出力に失敗しました');
+      await exportRecordsCsv(period);
+    } catch {
+      Alert.alert('CSV出力', '出力するデータがありません');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Button title="CSV出力" onPress={onPress} />
+    <View style={{ gap: 8 }}>
+      <Button
+        title="CSV出力（全期間）"
+        onPress={() => handle('all')}
+      />
+      <Button
+        title="CSV出力（今月）"
+        onPress={() => handle('thisMonth')}
+      />
+      <Button
+        title="CSV出力（先月）"
+        onPress={() => handle('lastMonth')}
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-});

@@ -59,8 +59,7 @@ export default function RecordInputForm({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>売上入力</Text>
-
+      
       <TextInput
         style={styles.input}
         keyboardType="numeric"
