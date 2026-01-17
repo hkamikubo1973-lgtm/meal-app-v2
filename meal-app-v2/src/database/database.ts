@@ -25,14 +25,27 @@ export type MonthlyTotal = {
   total_sales: number;
 };
 
+export type MonthlyBusinessTotal = {
+  month: string; // YYYY-MM
+  business_type: 'normal' | 'charter' | 'other';
+  total_sales: number;
+};
+
+export type DailyBusinessTotal = {
+  duty_date: string;
+  business_type: 'normal' | 'charter' | 'other';
+  total_sales: number;
+};
+
 /* =========
-   DB取得
+   DB取得 & 初期化
 ========= */
 
 export const getDb = async () => {
   if (!db) {
     db = await SQLite.openDatabaseAsync('app.db');
 
+    // ---- 売上（既存・聖域） ----
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS daily_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,12 +56,26 @@ export const getDb = async () => {
         created_at TEXT NOT NULL
       );
     `);
+
+    // ---- Phase2: 食事タグ（独立） ----
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS meal_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT NOT NULL,
+        duty_date TEXT NOT NULL,
+        meal_label TEXT NOT NULL,
+        meal_time TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
   }
+
   return db;
 };
 
 /* =========
-   INSERT
+   INSERT（売上）
 ========= */
 
 export const insertDailyRecord = async (
@@ -58,6 +85,7 @@ export const insertDailyRecord = async (
   businessType: 'normal' | 'charter' | 'other'
 ) => {
   const db = await getDb();
+
   await db.runAsync(
     `
     INSERT INTO daily_records
@@ -75,7 +103,7 @@ export const insertDailyRecord = async (
 };
 
 /* =========
-   DELETE
+   DELETE（売上）
 ========= */
 
 export const deleteDailyRecord = async (id: number) => {
@@ -87,13 +115,14 @@ export const deleteDailyRecord = async (id: number) => {
 };
 
 /* =========
-   SELECT
+   SELECT（売上）
 ========= */
 
 export const getDailyRecords = async (
   uuid: string
 ): Promise<DailyRecord[]> => {
   const db = await getDb();
+
   return await db.getAllAsync<DailyRecord>(
     `
     SELECT *
@@ -109,6 +138,7 @@ export const getDailyTotals = async (
   uuid: string
 ): Promise<DailyTotal[]> => {
   const db = await getDb();
+
   return await db.getAllAsync<DailyTotal>(
     `
     SELECT
@@ -127,6 +157,7 @@ export const getMonthlyTotals = async (
   uuid: string
 ): Promise<MonthlyTotal[]> => {
   const db = await getDb();
+
   return await db.getAllAsync<MonthlyTotal>(
     `
     SELECT
@@ -146,6 +177,7 @@ export const getTodayTotal = async (
   dutyDate: string
 ): Promise<number> => {
   const db = await getDb();
+
   const rows = await db.getAllAsync<{ total: number }>(
     `
     SELECT COALESCE(SUM(sales), 0) AS total
@@ -154,13 +186,8 @@ export const getTodayTotal = async (
     `,
     [uuid, dutyDate]
   );
-  return rows[0]?.total ?? 0;
-};
 
-export type MonthlyBusinessTotal = {
-  month: string; // YYYY-MM
-  business_type: 'normal' | 'charter' | 'other';
-  total_sales: number;
+  return rows[0]?.total ?? 0;
 };
 
 export const getMonthlyBusinessTotals = async (
@@ -176,19 +203,11 @@ export const getMonthlyBusinessTotals = async (
       SUM(sales) AS total_sales
     FROM daily_records
     WHERE uuid = ?
-    GROUP BY
-      substr(duty_date, 1, 7),
-      business_type
+    GROUP BY substr(duty_date, 1, 7), business_type
     ORDER BY month DESC, business_type
     `,
     [uuid]
   );
-};
-
-export type DailyBusinessTotal = {
-  duty_date: string;
-  business_type: 'normal' | 'charter' | 'other';
-  total_sales: number;
 };
 
 export const getDailyBusinessTotals = async (
@@ -233,4 +252,56 @@ export const getTodayBusinessTotals = async (
     `,
     [uuid, dutyDate]
   );
+};
+
+/* =========
+   Phase2: 食事タグ（INSERTのみ）
+========= */
+
+export const insertMealRecord = async (
+  uuid: string,
+  dutyDate: string,
+  mealLabel:
+    | 'noodle'
+    | 'rice'
+    | 'light'
+    | 'healthy'
+    | 'supplement'
+    | 'skip'
+) => {
+  const db = await getDb();
+  const now = new Date().toISOString();
+
+  await db.runAsync(
+    `
+    INSERT INTO meal_records (
+      uuid,
+      duty_date,
+      meal_label,
+      meal_time
+    )
+    VALUES (?, ?, ?, ?)
+    `,
+    [uuid, dutyDate, mealLabel, now]
+  );
+};
+
+export const getTodayMealLabel = async (
+  uuid: string,
+  dutyDate: string
+): Promise<string | null> => {
+  const db = await getDb();
+
+  const rows = await db.getAllAsync<{ meal_label: string }>(
+    `
+    SELECT meal_label
+    FROM meal_records
+    WHERE uuid = ? AND duty_date = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+    `,
+    [uuid, dutyDate]
+  );
+
+  return rows.length > 0 ? rows[0].meal_label : null;
 };

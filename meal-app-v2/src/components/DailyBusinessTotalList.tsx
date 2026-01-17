@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text } from 'react-native';
 import { DailyBusinessTotal } from '../database/database';
 
@@ -31,10 +32,8 @@ const color = (type: 'normal' | 'charter' | 'other') => {
   }
 };
 
-export default function DailyBusinessTotalList({
-  totals,
-}: Props) {
-  if (totals.length === 0) {
+export default function DailyBusinessTotalList({ totals }: Props) {
+  if (!totals || totals.length === 0) {
     return (
       <Text style={{ color: '#666' }}>
         種別別の日別集計はまだありません
@@ -56,6 +55,7 @@ export default function DailyBusinessTotalList({
           <Text style={{ fontSize: 13, color: '#666' }}>
             乗務日：{t.duty_date}
           </Text>
+
           <Text
             style={{
               fontSize: 14,
@@ -64,6 +64,7 @@ export default function DailyBusinessTotalList({
           >
             {label(t.business_type)}
           </Text>
+
           <Text
             style={{
               fontSize: 18,

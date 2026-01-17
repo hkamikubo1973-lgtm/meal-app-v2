@@ -9,7 +9,7 @@ type BusinessTotal = {
 type Props = {
   dutyDate: string;
   total: number;
-  businessTotals: BusinessTotal[];
+  businessTotals?: BusinessTotal[]; // ← ★ optional（重要）
 };
 
 const label = (type: 'normal' | 'charter' | 'other') => {
@@ -73,8 +73,8 @@ export default function TodayTotal({
         {total.toLocaleString()} 円
       </Text>
 
-      {/* 折りたたみ部 */}
-      {open && (
+      {/* ▼ 折りたたみ内訳（businessTotals がある場合のみ） */}
+      {open && businessTotals && (
         <View style={{ marginTop: 6 }}>
           {businessTotals.map((b) => (
             <Text
