@@ -32,7 +32,7 @@ export default function DailyTotalList({ totals }: Props) {
           <Text>乗務日：{t.duty_date}</Text>
           <Text>
             合計売上：
-            {t.total_sales.toLocaleString()} 円
+            {(t.total_sales ?? 0).toLocaleString()} 円
           </Text>
         </View>
       ))}

@@ -1,71 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { getTodayMealLabel } from '../database/database';
+import { getMealRecordsByDate } from '../database/mealRecords';
 
 type Props = {
   uuid: string;
-  dutyDate: string; // ← 売上と同じ出庫日を必ず受け取る
+  dutyDate: string;
+  refreshKey: number;
 };
 
-export default function TodayRecordList({ uuid, dutyDate }: Props) {
-  const [mealLabel, setMealLabel] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function TodayRecordList({
+  uuid,
+  dutyDate,
+  refreshKey,
+}: Props) {
+  const [records, setRecords] = useState<any[]>([]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadMeal = async () => {
-      try {
-        const label = await getTodayMealLabel(uuid, dutyDate);
-        if (mounted) {
-          setMealLabel(label);
-        }
-      } catch (e) {
-        console.error('meal load error', e);
-        if (mounted) {
-          setError('食事データ取得エラー');
-        }
-      }
+    const load = async () => {
+      const rows = await getMealRecordsByDate(uuid, dutyDate);
+      console.log('MEAL RECORDS ROWS', rows);
+      setRecords(Array.isArray(rows) ? rows : []);
     };
+    load();
+  }, [uuid, dutyDate, refreshKey]);
 
-    loadMeal();
-
-    return () => {
-      mounted = false;
-    };
-  }, [uuid, dutyDate]);
+  if (records.length === 0) {
+    return <Text style={styles.empty}>食事記録はまだありません</Text>;
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>食事</Text>
-
-      {error && <Text style={styles.error}>{error}</Text>}
-
-      {!error && (
-        <Text style={styles.value}>
-          {mealLabel ? `食事：${mealLabel}` : '食事：未記録'}
+    <View>
+      {records.map((r, i) => (
+        <Text key={i} style={styles.item}>
+          ・{r.label}
         </Text>
-      )}
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 14,
-    color: '#333',
-  },
-  error: {
-    fontSize: 14,
-    color: 'red',
-  },
+  empty: { margin: 16, color: '#666' },
+  item: { margin: 8, fontSize: 16 },
 });

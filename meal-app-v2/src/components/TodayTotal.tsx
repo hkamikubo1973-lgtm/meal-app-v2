@@ -1,106 +1,41 @@
-import { View, Text, Pressable } from 'react-native';
-import { useState } from 'react';
-
-type BusinessTotal = {
-  business_type: 'normal' | 'charter' | 'other';
-  total_sales: number;
-};
+// src/components/TodayTotal.tsx
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { getTodayTotal } from '../database/database';
 
 type Props = {
+  uuid: string;
   dutyDate: string;
-  total: number;
-  businessTotals?: BusinessTotal[]; // ← ★ optional（重要）
-};
-
-const label = (type: 'normal' | 'charter' | 'other') => {
-  switch (type) {
-    case 'normal':
-      return '通常';
-    case 'charter':
-      return '貸切';
-    case 'other':
-      return 'その他';
-    default:
-      return '';
-  }
-};
-
-const color = (type: 'normal' | 'charter' | 'other') => {
-  switch (type) {
-    case 'normal':
-      return '#bbdefb';
-    case 'charter':
-      return '#ffcdd2';
-    case 'other':
-      return '#e1bee7';
-    default:
-      return '#fff';
-  }
+  refreshKey: number;
 };
 
 export default function TodayTotal({
+  uuid,
   dutyDate,
-  total,
-  businessTotals,
+  refreshKey,
 }: Props) {
-  const [open, setOpen] = useState(true);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      const t = await getTodayTotal(uuid, dutyDate);
+      setTotal(t);
+    };
+    load();
+  }, [uuid, dutyDate, refreshKey]);
 
   return (
-    <Pressable
-      onPress={() => setOpen((v) => !v)}
-      style={{
-        padding: 18,
-        backgroundColor: '#1e88e5',
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 4,
-      }}
-    >
-      <Text style={{ fontSize: 13, color: '#e3f2fd' }}>
-        本日の売上（出庫日基準）
+    <View style={styles.box}>
+      <Text style={styles.date}>乗務日：{dutyDate}</Text>
+      <Text style={styles.total}>
+        本日の売上：{total.toLocaleString()} 円
       </Text>
-
-      <Text
-        style={{
-          fontSize: 34,
-          fontWeight: 'bold',
-          color: '#fff',
-          marginTop: 6,
-        }}
-      >
-        {total.toLocaleString()} 円
-      </Text>
-
-      {/* ▼ 折りたたみ内訳（businessTotals がある場合のみ） */}
-      {open && businessTotals && (
-        <View style={{ marginTop: 6 }}>
-          {businessTotals.map((b) => (
-            <Text
-              key={b.business_type}
-              style={{
-                fontSize: 14,
-                color: color(b.business_type),
-                marginTop: 2,
-              }}
-            >
-              {label(b.business_type)}：
-              {b.total_sales.toLocaleString()} 円
-            </Text>
-          ))}
-        </View>
-      )}
-
-      <Text
-        style={{
-          fontSize: 12,
-          color: '#bbdefb',
-          marginTop: 6,
-        }}
-      >
-        乗務日：{dutyDate}（タップで{open ? '閉じる' : '展開'}）
-      </Text>
-    </Pressable>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  box: { padding: 12 },
+  date: { fontSize: 14 },
+  total: { fontSize: 18, fontWeight: 'bold', marginTop: 4 },
+});

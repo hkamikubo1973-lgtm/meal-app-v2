@@ -70,7 +70,7 @@ export default function MonthlyBusinessTotalList({
               fontWeight: 'bold',
             }}
           >
-            {t.total_sales.toLocaleString()} 円
+            {(t.total_sales ?? 0).toLocaleString()} 円
           </Text>
         </View>
       ))}
