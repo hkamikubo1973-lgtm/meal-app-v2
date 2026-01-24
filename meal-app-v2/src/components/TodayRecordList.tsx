@@ -1,34 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { getTodayMealLabel } from '../database/database';
+import { getMealCountByDutyDate } from '../database/database';
 
 type Props = {
   uuid: string;
-  dutyDate: string; // ← 売上と同じ出庫日を必ず受け取る
+  dutyDate: string;
 };
 
 export default function TodayRecordList({ uuid, dutyDate }: Props) {
-  const [mealLabel, setMealLabel] = useState<string | null>(null);
+  const [count, setCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadMeal = async () => {
+    const loadCount = async () => {
       try {
-        const label = await getTodayMealLabel(uuid, dutyDate);
-        if (mounted) {
-          setMealLabel(label);
-        }
+        const c = await getMealCountByDutyDate(uuid, dutyDate);
+        if (mounted) setCount(c);
       } catch (e) {
-        console.error('meal load error', e);
-        if (mounted) {
-          setError('食事データ取得エラー');
-        }
+        console.error(e);
+        if (mounted) setError('食事データ取得エラー');
       }
     };
 
-    loadMeal();
+    loadCount();
 
     return () => {
       mounted = false;
@@ -39,12 +35,10 @@ export default function TodayRecordList({ uuid, dutyDate }: Props) {
     <View style={styles.container}>
       <Text style={styles.title}>食事</Text>
 
-      {error && <Text style={styles.error}>{error}</Text>}
-
-      {!error && (
-        <Text style={styles.value}>
-          {mealLabel ? `食事：${mealLabel}` : '食事：未記録'}
-        </Text>
+      {error ? (
+        <Text style={styles.error}>{error}</Text>
+      ) : (
+        <Text style={styles.value}>食事：{count}件</Text>
       )}
     </View>
   );

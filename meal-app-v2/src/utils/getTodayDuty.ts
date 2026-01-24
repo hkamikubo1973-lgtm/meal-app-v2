@@ -1,24 +1,13 @@
-// src/utils/getTodayDuty.ts
-
-export type DutyType = 'DUTY' | 'AKEY' | 'OFF';
-
-export const getTodayDuty = (params: {
-  baseDate: string;
-  standardCycle: DutyType[];
+export function getTodayDuty(state?: {
+  baseDate: string | null;
+  standardCycle?: number;
   targetDate?: string;
-}): DutyType => {
-  const { baseDate, standardCycle, targetDate } = params;
+}) {
+  if (!state?.baseDate) {
+    // 初期起動・未設定時の安全弁
+    return new Date().toISOString().slice(0, 10);
+  }
 
-  const base = new Date(baseDate);
-  const today = targetDate ? new Date(targetDate) : new Date();
-
-  const diffDays = Math.floor(
-    (today.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  const index =
-    ((diffDays % standardCycle.length) + standardCycle.length) %
-    standardCycle.length;
-
-  return standardCycle[index];
-};
+  const base = new Date(state.baseDate);
+  return base.toISOString().slice(0, 10);
+}

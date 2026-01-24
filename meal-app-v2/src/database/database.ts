@@ -38,14 +38,14 @@ export type DailyBusinessTotal = {
 };
 
 /* =========
-   DB取得 & 初期化
+   DB取得 & 初期化（最重要）
 ========= */
 
 export const getDb = async () => {
   if (!db) {
     db = await SQLite.openDatabaseAsync('app.db');
 
-    // ---- 売上（既存・聖域） ----
+    /* ---- 売上（既存・聖域） ---- */
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS daily_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +57,7 @@ export const getDb = async () => {
       );
     `);
 
-    // ---- Phase2: 食事タグ（独立） ----
+    /* ---- Phase2：食事タグ（独立） ---- */
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS meal_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -233,12 +233,7 @@ export const getDailyBusinessTotals = async (
 export const getTodayBusinessTotals = async (
   uuid: string,
   dutyDate: string
-): Promise<
-  {
-    business_type: 'normal' | 'charter' | 'other';
-    total_sales: number;
-  }[]
-> => {
+) => {
   const db = await getDb();
 
   return await db.getAllAsync(
@@ -255,7 +250,7 @@ export const getTodayBusinessTotals = async (
 };
 
 /* =========
-   Phase2: 食事タグ（INSERTのみ）
+   Phase2：食事タグ
 ========= */
 
 export const insertMealRecord = async (
@@ -273,18 +268,19 @@ export const insertMealRecord = async (
   const now = new Date().toISOString();
 
   await db.runAsync(
-    `
-    INSERT INTO meal_records (
-      uuid,
-      duty_date,
-      meal_label,
-      meal_time
-    )
-    VALUES (?, ?, ?, ?)
-    `,
-    [uuid, dutyDate, mealLabel, now]
-  );
-};
+  `
+  INSERT INTO meal_records (
+    uuid,
+    duty_date,
+    meal_label,
+    meal_time,
+    created_at
+  )
+  VALUES (?, ?, ?, ?, ?)
+  `,
+  [uuid, dutyDate, mealLabel, now, now]
+);
+
 
 export const getTodayMealLabel = async (
   uuid: string,
@@ -304,4 +300,22 @@ export const getTodayMealLabel = async (
   );
 
   return rows.length > 0 ? rows[0].meal_label : null;
+};
+
+export const getMealCountByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+): Promise<number> => {
+  const db = await getDb();
+
+  const rows = await db.getAllAsync<{ count: number }>(
+    `
+    SELECT COUNT(*) as count
+    FROM meal_records
+    WHERE uuid = ? AND duty_date = ?
+    `,
+    [uuid, dutyDate]
+  );
+
+  return rows[0]?.count ?? 0;
 };
