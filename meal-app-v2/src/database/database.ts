@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
+<<<<<<< HEAD
 /* =========
    型定義
 ========= */
@@ -46,17 +47,23 @@ export const getDb = async () => {
     db = await SQLite.openDatabaseAsync('app.db');
 
     /* ---- 売上（既存・聖域） ---- */
+=======
+export async function getDb() {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('app.db');
+
+>>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS daily_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT NOT NULL,
         duty_date TEXT NOT NULL,
         sales INTEGER NOT NULL,
-        business_type TEXT NOT NULL DEFAULT 'normal',
         created_at TEXT NOT NULL
       );
     `);
 
+<<<<<<< HEAD
     /* ---- Phase2：食事タグ（独立） ---- */
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS meal_records (
@@ -69,25 +76,26 @@ export const getDb = async () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
+=======
+    console.log('DB INIT OK');
+>>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
   }
-
   return db;
-};
+}
 
-/* =========
-   INSERT（売上）
-========= */
-
-export const insertDailyRecord = async (
+/* ★★ これが無い or export されていなかった ★★ */
+export async function insertDailyRecord(
   uuid: string,
   dutyDate: string,
-  sales: number,
-  businessType: 'normal' | 'charter' | 'other'
-) => {
+  sales: number
+) {
+  console.log('insertDailyRecord CALLED', { uuid, dutyDate, sales });
+
   const db = await getDb();
 
   await db.runAsync(
     `
+<<<<<<< HEAD
     INSERT INTO daily_records
       (uuid, duty_date, sales, business_type, created_at)
     VALUES (?, ?, ?, ?, ?)
@@ -319,3 +327,11 @@ export const getMealCountByDutyDate = async (
 
   return rows[0]?.count ?? 0;
 };
+=======
+    INSERT INTO daily_records (uuid, duty_date, sales, created_at)
+    VALUES (?, ?, ?, ?)
+    `,
+    [uuid, dutyDate, sales, new Date().toISOString()]
+  );
+}
+>>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
