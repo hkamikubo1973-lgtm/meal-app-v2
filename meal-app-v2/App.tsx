@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -8,42 +7,22 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
-import {
-  getDailyTotals,
-  getDailyBusinessTotals,
-  getMonthlyTotals,
-  getMonthlyBusinessTotals,
-  getTodayTotal,
-  DailyTotal,
-  DailyBusinessTotal,
-  MonthlyTotal,
-  MonthlyBusinessTotal,
-} from './src/database/database';
-=======
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
-
 import { getTodayDuty } from './src/utils/getTodayDuty';
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
 
 import TodayTotal from './src/components/TodayTotal';
-<<<<<<< HEAD
-=======
 import RecordInputForm from './src/components/RecordInputForm';
 import MealTagButtons from './src/components/MealTagButtons';
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
 import TodayRecordList from './src/components/TodayRecordList';
-import MealInputButtons from './src/components/MealInputButtons';
+import TodaySalesList from './src/components/TodaySalesList'; 
+import TodayTimeline from './src/components/TodayTimeline';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function App() {
-  const [uuid, setUuid] = useState('');
-  const [dutyDate, setDutyDate] = useState(todayISO());
+  const [uuid, setUuid] = useState<string>('');
+  const [dutyDate, setDutyDate] = useState<string>(todayISO());
 
-  // ★ これが超重要（再読込用）
+  // ★ 再読み込みトリガ（売上・食事 共通）
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -71,31 +50,14 @@ export default function App() {
     init();
   }, []);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    const loadTotals = async () => {
-      setDailyTotals(await getDailyTotals());
-      setDailyBusinessTotals(await getDailyBusinessTotals());
-      setMonthlyTotals(await getMonthlyTotals());
-      setMonthlyBusinessTotals(await getMonthlyBusinessTotals());
-      setTodayTotal(await getTodayTotal(dutyDate));
-    };
-    loadTotals();
-  }, [dutyDate, saveKey]);
-=======
-  // UUID未確定時は描画しない（白画面防止）
+  // UUID 未確定時は描画しない（白画面防止）
   if (!uuid) return null;
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
 
-<<<<<<< HEAD
-        {/* 今日の売上（出庫日基準） */}
-=======
-        {/* ★ key が変わると強制再マウント */}
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
+        {/* 今日の売上（出庫日基準・合計） */}
         <TodayTotal
           key={`total-${reloadKey}`}
           uuid={uuid}
@@ -109,28 +71,28 @@ export default function App() {
           onSaved={() => setReloadKey(v => v + 1)}
         />
 
-<<<<<<< HEAD
-        {/* ★ 食事タグ入力（増築） */}
-        <MealInputButtons uuid={uuid} />
+        {/* ★ 今日の売上履歴（時系列） */}
+        <TodaySalesList
+          key={`sales-${reloadKey}`}
+          uuid={uuid}
+          dutyDate={dutyDate}
+        />
 
-        {/* 集計表示 */}
-        <DailyBusinessTotalList totals={dailyBusinessTotals} />
-        <DailyTotalList totals={dailyTotals} />
-        <MonthlyBusinessTotalList totals={monthlyBusinessTotals} />
-        <MonthlyTotalList totals={monthlyTotals} />
-
-        {/* 今日の売上・食事一覧 */}
-        <TodayRecordList
-=======
+        {/* 食事タグ入力 */}
         <MealTagButtons
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={() => setReloadKey(v => v + 1)}
         />
 
+        {/* 今日の食事一覧 */}
         <TodayRecordList
-          key={`list-${reloadKey}`}
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
+          key={`meal-${reloadKey}`}
+          uuid={uuid}
+          dutyDate={dutyDate}
+        />
+        <TodayTimeline
+          key={`timeline-${reloadKey}`}
           uuid={uuid}
           dutyDate={dutyDate}
         />
@@ -141,5 +103,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
 });
