@@ -1,88 +1,121 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-<<<<<<< HEAD
-import { getMealCountByDutyDate } from '../database/database';
-=======
-import { getMealRecordsByDate } from '../database/mealRecords';
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
+import {
+  MealRecord,
+  getMealRecordsByDutyDate,
+} from '../database/database';
+import { MEAL_LABEL_JP } from './mealLabels';
 
 type Props = {
   uuid: string;
   dutyDate: string;
-<<<<<<< HEAD
 };
 
 export default function TodayRecordList({ uuid, dutyDate }: Props) {
-  const [count, setCount] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
+  const [records, setRecords] = useState<MealRecord[]>([]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadCount = async () => {
-      try {
-        const c = await getMealCountByDutyDate(uuid, dutyDate);
-        if (mounted) setCount(c);
-      } catch (e) {
-        console.error(e);
-        if (mounted) setError('食事データ取得エラー');
-      }
-=======
-  refreshKey: number;
-};
-
-export default function TodayRecordList({
-  uuid,
-  dutyDate,
-  refreshKey,
-}: Props) {
-  const [records, setRecords] = useState<any[]>([]);
-
-  useEffect(() => {
-    const load = async () => {
-      const rows = await getMealRecordsByDate(uuid, dutyDate);
-      console.log('MEAL RECORDS ROWS', rows);
-      setRecords(Array.isArray(rows) ? rows : []);
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
-    };
-    load();
-  }, [uuid, dutyDate, refreshKey]);
-
-<<<<<<< HEAD
-    loadCount();
-
-    return () => {
-      mounted = false;
-    };
+    getMealRecordsByDutyDate(uuid, dutyDate).then(setRecords);
   }, [uuid, dutyDate]);
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>食事</Text>
+  /* =========
+     時刻表示
+  ========= */
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
-      {error ? (
-        <Text style={styles.error}>{error}</Text>
-      ) : (
-        <Text style={styles.value}>食事：{count}件</Text>
-      )}
-=======
-  if (records.length === 0) {
-    return <Text style={styles.empty}>食事記録はまだありません</Text>;
-  }
+  /* =========
+     食事集計
+  ========= */
+  const summary = useMemo(() => {
+    const base: Record<string, number> = {
+      rice: 0,
+      noodle: 0,
+      light: 0,
+      healthy: 0,
+      supplement: 0,
+      skip: 0,
+    };
+
+    records.forEach(r => {
+      if (base[r.meal_label] !== undefined) {
+        base[r.meal_label]++;
+      }
+    });
+
+    return base;
+  }, [records]);
 
   return (
-    <View>
-      {records.map((r, i) => (
-        <Text key={i} style={styles.item}>
-          ・{r.label}
-        </Text>
+    <View style={styles.wrapper}>
+      {/* 件数 */}
+      <Text style={styles.title}>食事（{records.length}回）</Text>
+
+      {/* 集計表示 */}
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryTitle}>食事内訳</Text>
+        {Object.entries(summary).map(([key, count]) => (
+          <Text key={key} style={styles.summaryItem}>
+            ・{MEAL_LABEL_JP[key] ?? key}：{count}回
+          </Text>
+        ))}
+      </View>
+
+      {/* 履歴 */}
+      {records.map(r => (
+        <View key={r.id} style={styles.row}>
+          <Text style={styles.label}>
+            {MEAL_LABEL_JP[r.meal_label] ?? r.meal_label}
+          </Text>
+          <Text style={styles.time}>{formatTime(r.created_at)}</Text>
+        </View>
       ))}
->>>>>>> c510af0692acee9c11d68de8e3d5d1ecdc02a23a
     </View>
   );
 }
 
+/* =========
+   styles
+========= */
 const styles = StyleSheet.create({
-  empty: { margin: 16, color: '#666' },
-  item: { margin: 8, fontSize: 16 },
+  wrapper: {
+    paddingVertical: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  summaryBox: {
+    backgroundColor: '#f3f3f3',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  summaryItem: {
+    fontSize: 14,
+    color: '#333',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  label: {
+    fontSize: 16,
+  },
+  time: {
+    fontSize: 14,
+    color: '#666',
+  },
 });

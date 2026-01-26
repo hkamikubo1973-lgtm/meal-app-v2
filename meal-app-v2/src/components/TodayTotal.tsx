@@ -1,20 +1,21 @@
 // src/components/TodayTotal.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+
 import { getTodayTotal } from '../database/database';
 
 type Props = {
   uuid: string;
   dutyDate: string;
-  refreshKey: number;
+  refreshKey?: number;
 };
 
 export default function TodayTotal({
   uuid,
   dutyDate,
-  refreshKey,
+  refreshKey = 0,
 }: Props) {
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
@@ -35,7 +36,16 @@ export default function TodayTotal({
 }
 
 const styles = StyleSheet.create({
-  box: { padding: 12 },
-  date: { fontSize: 14 },
-  total: { fontSize: 18, fontWeight: 'bold', marginTop: 4 },
+  box: {
+    padding: 12,
+  },
+  date: {
+    fontSize: 14,
+    color: '#555',
+  },
+  total: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
 });

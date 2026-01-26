@@ -1,5 +1,7 @@
+// src/components/RecordInputForm.tsx
+
 import React, { useState } from 'react';
-import { View, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { insertDailyRecord } from '../database/database';
 
 type Props = {
@@ -8,35 +10,64 @@ type Props = {
   onSaved: () => void;
 };
 
-export default function RecordInputForm({ uuid, dutyDate, onSaved }: Props) {
-  const [amount, setAmount] = useState('');
+export default function RecordInputForm({
+  uuid,
+  dutyDate,
+  onSaved,
+}: Props) {
+  const [value, setValue] = useState('');
 
   const save = async () => {
-    const value = Number(amount);
-    if (!value) return;
-
-    console.log('SAVE BUTTON PRESSED', { uuid, dutyDate, value });
-
-    try {
-      await insertDailyRecord(uuid, dutyDate, value);
-      console.log('DAILY SALES SAVED');
-      setAmount('');
-      onSaved();
-    } catch (e: any) {
-      console.error('SALES SAVE ERROR', e);
-      Alert.alert('保存失敗', e.message);
-    }
+    const num = Number(value);
+    if (!num) return;
+    await insertDailyRecord(uuid, dutyDate, num);
+    setValue('');
+    onSaved();
   };
 
   return (
-    <View>
+    <View style={styles.wrapper}>
+      <Text style={styles.label}>売上金額</Text>
+
       <TextInput
-        placeholder="売上金額"
-        keyboardType="numeric"
-        value={amount}
-        onChangeText={setAmount}
+        value={value}
+        onChangeText={setValue}
+        keyboardType="number-pad"
+        placeholder="例：50000"
+        style={styles.input}
       />
-      <Button title="保存" onPress={save} />
+
+      <Pressable style={styles.button} onPress={save}>
+        <Text style={styles.buttonText}>保存</Text>
+      </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    padding: 12,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  button: {
+    backgroundColor: '#2196f3',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

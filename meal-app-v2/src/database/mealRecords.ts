@@ -1,37 +1,55 @@
 import { getDb } from './database';
 
-export async function insertMealRecord(
+export type MealRecord = {
+  id: number;
+  uuid: string;
+  duty_date: string;
+  meal_label: string;
+  created_at: string;
+};
+
+/* =========
+   INSERT
+========= */
+export const insertMealRecord = async (
   uuid: string,
   dutyDate: string,
-  label: string
-) {
+  mealLabel: string
+) => {
   const db = await getDb();
-  const mealTime = new Date().toISOString();
+  const now = new Date().toISOString();
 
   await db.runAsync(
     `
-    INSERT INTO meal_records (uuid, duty_date, meal_time, label)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO meal_records (
+      uuid,
+      duty_date,
+      meal_label,
+      meal_time,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?)
     `,
-    [uuid, dutyDate, mealTime, label]
+    [uuid, dutyDate, mealLabel, now, now]
   );
-}
+};
 
-export async function getMealRecordsByDate(
+/* =========
+   SELECT（当日）
+========= */
+export const getMealRecordsByDutyDate = async (
   uuid: string,
   dutyDate: string
-) {
+): Promise<MealRecord[]> => {
   const db = await getDb();
 
-  const rows = await db.getAllAsync(
+  return await db.getAllAsync<MealRecord>(
     `
     SELECT *
     FROM meal_records
     WHERE uuid = ? AND duty_date = ?
-    ORDER BY meal_time ASC
+    ORDER BY created_at ASC
     `,
     [uuid, dutyDate]
   );
-
-  return rows ?? [];
-}
+};

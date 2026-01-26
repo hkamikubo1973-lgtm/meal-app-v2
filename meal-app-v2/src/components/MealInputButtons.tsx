@@ -1,73 +1,76 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { insertMealRecord } from '../database/database';
-import { getTodayDuty } from '../utils/getTodayDuty';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 
 type Props = {
-  uuid: string;
+  onSave: (label: string) => void;
 };
 
-const MEAL_LABELS = [
-  { key: 'rice', label: 'ご飯もの' },
-  { key: 'noodle', label: '麺類' },
-  { key: 'light', label: '軽食・パン' },
-  { key: 'healthy', label: '健康・和食' },
-  { key: 'supplement', label: '補給のみ' },
-  { key: 'skip', label: '抜き' },
+const BUTTONS = [
+  { label: 'ごはん・丼', value: 'rice' },
+  { label: '麺類', value: 'noodle' },
+  { label: '軽食・パン', value: 'light' },
+  { label: '定食', value: 'healthy', primary: true },
+  { label: '補給のみ', value: 'supplement', sub: true },
+  { label: '抜き', value: 'skip', sub: true },
 ];
 
-export default function MealInputButtons({ uuid }: Props) {
-  const handlePress = async (mealLabel: string) => {
-    try {
-      const dutyDate = getTodayDuty(); // 売上と同じ出庫日ロジック
-      await insertMealRecord(uuid, dutyDate, mealLabel);
-      Alert.alert('保存しました', `食事：${mealLabel}`);
-    } catch (e) {
-      console.error(e);
-      Alert.alert('エラー', '食事の保存に失敗しました');
-    }
-  };
-
+export default function MealInputButtons({ onSave }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>食事タグ</Text>
-      <View style={styles.buttonWrap}>
-        {MEAL_LABELS.map((m) => (
-          <TouchableOpacity
-            key={m.key}
-            style={styles.button}
-            onPress={() => handlePress(m.key)}
+      {BUTTONS.map(btn => (
+        <Pressable
+          key={btn.value}
+          style={[
+            styles.button,
+            btn.primary && styles.primary,
+            btn.sub && styles.sub,
+          ]}
+          onPress={() => onSave(btn.value)}
+        >
+          <Text
+            style={[
+              styles.text,
+              btn.primary && styles.primaryText,
+            ]}
           >
-            <Text style={styles.buttonText}>{m.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+            {btn.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 24,
-    paddingHorizontal: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  buttonWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
   },
   button: {
-    backgroundColor: '#e0e0e0',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    width: '48%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
   },
-  buttonText: {
-    fontSize: 14,
+  text: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // 定食（主役）
+  primary: {
+    backgroundColor: '#e0efe3',
+    borderWidth: 1,
+    borderColor: '#7fbf90',
+  },
+  primaryText: {
+    fontWeight: '700',
+  },
+
+  // 補給・抜き（弱め）
+  sub: {
+    backgroundColor: '#f7f7f7',
   },
 });
