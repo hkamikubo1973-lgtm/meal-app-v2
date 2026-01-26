@@ -54,7 +54,7 @@ export default function TodayRecordList({ uuid, dutyDate }: Props) {
       {/* 件数 */}
       <Text style={styles.title}>食事（{records.length}回）</Text>
 
-      {/* 集計表示 */}
+      {/* 集計 */}
       <View style={styles.summaryBox}>
         <Text style={styles.summaryTitle}>食事内訳</Text>
         {Object.entries(summary).map(([key, count]) => (
@@ -70,7 +70,9 @@ export default function TodayRecordList({ uuid, dutyDate }: Props) {
           <Text style={styles.label}>
             {MEAL_LABEL_JP[r.meal_label] ?? r.meal_label}
           </Text>
-          <Text style={styles.time}>{formatTime(r.created_at)}</Text>
+          <Text style={styles.time}>
+            {formatTime(r.created_at)}
+          </Text>
         </View>
       ))}
     </View>

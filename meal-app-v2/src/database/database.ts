@@ -24,13 +24,14 @@ export type MealRecord = {
 };
 
 /* =========
-   DB 初期化
+   DB取得 & 初期化
 ========= */
 
 export const getDb = async () => {
   if (!db) {
     db = await SQLite.openDatabaseAsync('app.db');
 
+    // 売上
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS daily_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +42,7 @@ export const getDb = async () => {
       );
     `);
 
+    // 食事
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS meal_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,8 +79,10 @@ export const insertDailyRecord = async (
   const dateOnly = normalizeDutyDate(dutyDate);
 
   await db.runAsync(
-    `INSERT INTO daily_records (uuid, duty_date, sales, created_at)
-     VALUES (?, ?, ?, ?)`,
+    `
+    INSERT INTO daily_records (uuid, duty_date, sales, created_at)
+    VALUES (?, ?, ?, ?)
+    `,
     [uuid, dateOnly, sales, new Date().toISOString()]
   );
 };
@@ -91,9 +95,11 @@ export const getTodayTotal = async (
   const dateOnly = normalizeDutyDate(dutyDate);
 
   const rows = await db.getAllAsync<{ total: number }>(
-    `SELECT COALESCE(SUM(sales),0) AS total
-     FROM daily_records
-     WHERE uuid = ? AND duty_date = ?`,
+    `
+    SELECT COALESCE(SUM(sales), 0) AS total
+    FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    `,
     [uuid, dateOnly]
   );
 
@@ -121,8 +127,10 @@ export const insertMealRecord = async (
   const dateOnly = normalizeDutyDate(dutyDate);
 
   await db.runAsync(
-    `INSERT INTO meal_records (uuid, duty_date, meal_label, created_at)
-     VALUES (?, ?, ?, ?)`,
+    `
+    INSERT INTO meal_records (uuid, duty_date, meal_label, created_at)
+    VALUES (?, ?, ?, ?)
+    `,
     [uuid, dateOnly, label, new Date().toISOString()]
   );
 };
@@ -134,11 +142,13 @@ export const getMealRecordsByDutyDate = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  return db.getAllAsync(
-    `SELECT *
-     FROM meal_records
-     WHERE uuid = ? AND duty_date = ?
-     ORDER BY created_at DESC`,
+  return db.getAllAsync<MealRecord>(
+    `
+    SELECT *
+    FROM meal_records
+    WHERE uuid = ? AND duty_date = ?
+    ORDER BY created_at DESC
+    `,
     [uuid, dateOnly]
   );
 };

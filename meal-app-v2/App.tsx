@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
 import { getTodayDuty } from './src/utils/getTodayDuty';
+
 import TodayTotal from './src/components/TodayTotal';
 import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
 import TodayRecordList from './src/components/TodayRecordList';
 
 export default function App() {
-  const [uuid, setUuid] = useState('');
-  const [dutyDate, setDutyDate] = useState('');
+  const [uuid, setUuid] = useState<string>('');
+  const [dutyDate, setDutyDate] = useState<string>('');
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const init = async () => {
-      // UUID
+      // UUID 初期化
       const stored = await AsyncStorage.getItem('uuid');
       if (stored) {
         setUuid(stored);
@@ -26,9 +31,8 @@ export default function App() {
         setUuid(u);
       }
 
-      // ★ 今日の日付から乗務日を計算する
+      // 今日から乗務日を算出（暫定：DUTY / OFF）
       const today = new Date().toISOString().slice(0, 10);
-
       const duty = getTodayDuty({
         baseDate: today,
         standardCycle: ['DUTY', 'OFF'],
@@ -48,26 +52,29 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <ScrollView>
 
+        {/* 本日の売上合計 */}
         <TodayTotal
-          key={`total-${reloadKey}`}
           uuid={uuid}
           dutyDate={dutyDate}
+          refreshKey={reloadKey}
         />
 
+        {/* 売上入力 */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={() => setReloadKey(v => v + 1)}
         />
 
+        {/* 食事入力 */}
         <MealInputButtons
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={() => setReloadKey(v => v + 1)}
         />
 
+        {/* 食事一覧 */}
         <TodayRecordList
-          key={`list-${reloadKey}`}
           uuid={uuid}
           dutyDate={dutyDate}
         />
@@ -78,5 +85,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
 });

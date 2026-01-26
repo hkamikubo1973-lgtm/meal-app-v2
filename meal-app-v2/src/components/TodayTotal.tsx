@@ -1,7 +1,5 @@
-// src/components/TodayTotal.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-
 import { getTodayTotal } from '../database/database';
 
 type Props = {
@@ -20,16 +18,16 @@ export default function TodayTotal({
   useEffect(() => {
     const load = async () => {
       const t = await getTodayTotal(uuid, dutyDate);
-      setTotal(t);
+      setTotal(t ?? 0);
     };
     load();
   }, [uuid, dutyDate, refreshKey]);
 
   return (
     <View style={styles.box}>
-      <Text style={styles.date}>乗務日：{dutyDate}</Text>
+      <Text style={styles.title}>本日の売上</Text>
       <Text style={styles.total}>
-        本日の売上：{total.toLocaleString()} 円
+        {total.toLocaleString()} 円
       </Text>
     </View>
   );
@@ -39,7 +37,7 @@ const styles = StyleSheet.create({
   box: {
     padding: 12,
   },
-  date: {
+  title: {
     fontSize: 14,
     color: '#555',
   },

@@ -25,12 +25,11 @@ export const insertMealRecord = async (
       uuid,
       duty_date,
       meal_label,
-      meal_time,
       created_at
     )
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?)
     `,
-    [uuid, dutyDate, mealLabel, now, now]
+    [uuid, dutyDate, mealLabel, now]
   );
 };
 
@@ -48,7 +47,7 @@ export const getMealRecordsByDutyDate = async (
     SELECT *
     FROM meal_records
     WHERE uuid = ? AND duty_date = ?
-    ORDER BY created_at ASC
+    ORDER BY created_at DESC
     `,
     [uuid, dutyDate]
   );
