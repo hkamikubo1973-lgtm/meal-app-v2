@@ -1,0 +1,80 @@
+import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+
+type Props = {
+  visible: boolean;
+  onSelect: (weather: string | null) => void;
+};
+
+const weathers = ['晴', '曇', '雨', '雪', '荒天'];
+
+export default function WeatherPicker({ visible, onSelect }: Props) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.wrapper}>
+      <Text style={styles.title}>今日の天気は？</Text>
+
+      {/* 横一列固定 */}
+      <View style={styles.buttons}>
+        {weathers.map((w) => (
+          <Pressable
+            key={w}
+            style={styles.weatherButton}
+            onPress={() => onSelect(w)}
+          >
+            <Text style={styles.weatherText}>{w}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Pressable onPress={() => onSelect(null)}>
+        <Text style={styles.skip}>スキップ</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: '#EEF6FF',
+    borderWidth: 1,
+    borderColor: '#CFE3FF',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+
+  // 🔽 横一列
+  buttons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  weatherButton: {
+    flex: 1,
+    marginHorizontal: 2,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D6E6FF',
+    alignItems: 'center',
+  },
+  weatherText: {
+    fontSize: 13, // 少しだけコンパクトに
+    color: '#333',
+    fontWeight: '600',
+  },
+  skip: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+  },
+});

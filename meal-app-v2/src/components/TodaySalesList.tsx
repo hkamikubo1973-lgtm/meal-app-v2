@@ -1,71 +1,82 @@
 // src/components/TodaySalesList.tsx
-
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { getTodaySalesRecords } from '../database/database';
+import {
+  getTodaySalesRecords,
+} from '../database/database';
+import { BUSINESS_TYPE_JP } from './salesLabels';
 
 type Props = {
   uuid: string;
   dutyDate: string;
 };
 
-type SalesRow = {
+type SalesRecord = {
   id: number;
   sales: number;
+  business_type: string;
   created_at: string;
 };
 
 export default function TodaySalesList({ uuid, dutyDate }: Props) {
-  const [rows, setRows] = useState<SalesRow[]>([]);
+  const [records, setRecords] = useState<SalesRecord[]>([]);
 
   useEffect(() => {
     const load = async () => {
-      const result = await getTodaySalesRecords(uuid, dutyDate);
-      setRows(Array.isArray(result) ? result : []);
+      const res = await getTodaySalesRecords(uuid, dutyDate);
+      setRecords(res);
     };
     load();
   }, [uuid, dutyDate]);
 
-  if (rows.length === 0) {
-    return <Text style={styles.empty}>売上：未入力</Text>;
-  }
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  if (records.length === 0) return null;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>今日の売上</Text>
+    <View style={styles.wrapper}>
+      <Text style={styles.title}>売上履歴</Text>
 
-      {rows.map(r => {
-        const time = new Date(r.created_at).toLocaleTimeString('ja-JP', {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-
-        return (
-          <Text key={r.id} style={styles.item}>
-            ・{time}　{r.sales.toLocaleString()}円
+      {records.map(r => (
+        <View key={r.id} style={styles.row}>
+          <Text style={styles.left}>
+            💴 {formatTime(r.created_at)}　
+            {BUSINESS_TYPE_JP[r.business_type] ?? r.business_type}
           </Text>
-        );
-      })}
+          <Text style={styles.amount}>
+            {r.sales.toLocaleString()} 円
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: 16,
-    marginTop: 8,
+  wrapper: {
+    paddingVertical: 8,
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 6,
   },
-  item: {
-    fontSize: 14,
-    marginVertical: 2,
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
   },
-  empty: {
-    margin: 16,
-    color: '#666',
+  left: {
+    fontSize: 14,
+  },
+  amount: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

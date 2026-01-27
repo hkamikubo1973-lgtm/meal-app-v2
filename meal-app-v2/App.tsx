@@ -14,14 +14,15 @@ import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
 import TodayRecordList from './src/components/TodayRecordList';
 
+import { insertMealRecord } from './src/database/mealRecords';
+
 export default function App() {
-  const [uuid, setUuid] = useState<string>('');
-  const [dutyDate, setDutyDate] = useState<string>('');
+  const [uuid, setUuid] = useState('');
+  const [dutyDate, setDutyDate] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const init = async () => {
-      // UUID 初期化
       const stored = await AsyncStorage.getItem('uuid');
       if (stored) {
         setUuid(stored);
@@ -31,7 +32,6 @@ export default function App() {
         setUuid(u);
       }
 
-      // 今日から乗務日を算出（暫定：DUTY / OFF）
       const today = new Date().toISOString().slice(0, 10);
       const duty = getTodayDuty({
         baseDate: today,
@@ -45,38 +45,38 @@ export default function App() {
     init();
   }, []);
 
-  // UUID / dutyDate 未確定なら描画しない
   if (!uuid || !dutyDate) return null;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
 
-        {/* 本日の売上合計 */}
         <TodayTotal
           uuid={uuid}
           dutyDate={dutyDate}
           refreshKey={reloadKey}
         />
 
-        {/* 売上入力 */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={() => setReloadKey(v => v + 1)}
         />
 
-        {/* 食事入力 */}
+        {/* ★ ここが重要 */}
         <MealInputButtons
-          uuid={uuid}
-          dutyDate={dutyDate}
-          onSaved={() => setReloadKey(v => v + 1)}
+          onSaved={async (label) => {
+            console.log('MEAL SAVE START', label);
+            await insertMealRecord(uuid, dutyDate, label);
+            console.log('MEAL SAVE DONE');
+            setReloadKey(v => v + 1);
+          }}
         />
 
-        {/* 食事一覧 */}
         <TodayRecordList
           uuid={uuid}
           dutyDate={dutyDate}
+          refreshKey={reloadKey}
         />
 
       </ScrollView>

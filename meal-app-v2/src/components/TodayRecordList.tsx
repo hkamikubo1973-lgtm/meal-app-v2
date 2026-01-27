@@ -1,111 +1,89 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import {
-  MealRecord,
-  getMealRecordsByDutyDate,
-} from '../database/database';
+import { getMealRecordsByDutyDate } from '../database/mealRecords';
+import { MealRecord } from '../database/mealRecords';
 import { MEAL_LABEL_JP } from './mealLabels';
 
 type Props = {
   uuid: string;
   dutyDate: string;
+  refreshKey?: number;
 };
 
-export default function TodayRecordList({ uuid, dutyDate }: Props) {
+export default function TodayRecordList({
+  uuid,
+  dutyDate,
+  refreshKey,
+}: Props) {
   const [records, setRecords] = useState<MealRecord[]>([]);
 
   useEffect(() => {
     getMealRecordsByDutyDate(uuid, dutyDate).then(setRecords);
-  }, [uuid, dutyDate]);
+  }, [uuid, dutyDate, refreshKey]);
 
-  /* =========
-     時刻表示
-  ========= */
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit',
     });
 
-  /* =========
-     食事集計
-  ========= */
-  const summary = useMemo(() => {
-    const base: Record<string, number> = {
-      rice: 0,
-      noodle: 0,
-      light: 0,
-      healthy: 0,
-      supplement: 0,
-      skip: 0,
-    };
-
-    records.forEach(r => {
-      if (base[r.meal_label] !== undefined) {
-        base[r.meal_label]++;
-      }
-    });
-
-    return base;
-  }, [records]);
-
   return (
-    <View style={styles.wrapper}>
-      {/* 件数 */}
-      <Text style={styles.title}>食事（{records.length}回）</Text>
+    <View style={styles.container}>
+      {/* 見出し */}
+      <Text style={styles.summary}>
+        食事（{records.length}回）
+      </Text>
 
-      {/* 集計 */}
-      <View style={styles.summaryBox}>
-        <Text style={styles.summaryTitle}>食事内訳</Text>
-        {Object.entries(summary).map(([key, count]) => (
-          <Text key={key} style={styles.summaryItem}>
-            ・{MEAL_LABEL_JP[key] ?? key}：{count}回
-          </Text>
-        ))}
-      </View>
+      {records.map((record, index) => {
+        const isLatest = index === 0;
 
-      {/* 履歴 */}
-      {records.map(r => (
-        <View key={r.id} style={styles.row}>
-          <Text style={styles.label}>
-            {MEAL_LABEL_JP[r.meal_label] ?? r.meal_label}
-          </Text>
-          <Text style={styles.time}>
-            {formatTime(r.created_at)}
-          </Text>
-        </View>
-      ))}
+        return (
+          <View
+            key={record.id}
+            style={[
+              styles.row,
+              isLatest && styles.latestRow,
+            ]}
+          >
+            <Text
+              style={[
+                styles.label,
+                !isLatest && styles.normalText,
+                isLatest && styles.latestText,
+              ]}
+            >
+              {MEAL_LABEL_JP[record.meal_label] ?? record.meal_label}
+            </Text>
+
+            <Text
+              style={[
+                styles.time,
+                !isLatest && styles.normalTime,
+                isLatest && styles.latestTime,
+              ]}
+            >
+              {formatTime(record.created_at)}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
-/* =========
-   styles
-========= */
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingVertical: 8,
+  container: {
+    marginTop: 8,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  summaryBox: {
-    backgroundColor: '#f3f3f3',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  summaryTitle: {
+
+  /* 見出し */
+  summary: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: 'normal',
     marginBottom: 4,
   },
-  summaryItem: {
-    fontSize: 14,
-    color: '#333',
-  },
+
+  /* 行 */
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -113,11 +91,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#eee',
   },
+
+  /* 通常文字（あえて薄く） */
+  normalText: {
+    color: '#666',
+    fontWeight: 'normal',
+  },
+  normalTime: {
+    color: '#888',
+  },
+
+  /* 最新1件 */
+  latestRow: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+  },
+  latestText: {
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  latestTime: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+
   label: {
     fontSize: 16,
   },
   time: {
     fontSize: 14,
-    color: '#666',
   },
 });

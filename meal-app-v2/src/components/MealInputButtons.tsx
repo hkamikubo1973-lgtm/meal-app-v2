@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
 type Props = {
-  onSave: (label: string) => void;
+  onSaved: (label: string) => void;
 };
 
 const BUTTONS = [
@@ -14,7 +14,7 @@ const BUTTONS = [
   { label: '抜き', value: 'skip', sub: true },
 ];
 
-export default function MealInputButtons({ onSave }: Props) {
+export default function MealInputButtons({ onSaved }: Props) {
   return (
     <View style={styles.container}>
       {BUTTONS.map(btn => (
@@ -25,7 +25,11 @@ export default function MealInputButtons({ onSave }: Props) {
             btn.primary && styles.primary,
             btn.sub && styles.sub,
           ]}
-          onPress={() => onSave(btn.value)}
+          onPress={() => {
+           console.log('MEAL BUTTON PRESSED:', btn.value);
+           onSaved(btn.value);
+          }}
+
         >
           <Text
             style={[
@@ -46,6 +50,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 12,
   },
   button: {
     width: '48%',

@@ -7,19 +7,38 @@ let db: SQLite.SQLiteDatabase | null = null;
    型定義
 ========= */
 
+export type BusinessType = 'normal' | 'charter' | 'other';
+
+export type WeatherType =
+  | '晴'
+  | '曇'
+  | '雨'
+  | '雪'
+  | '荒天';
+
 export type DailyRecord = {
   id: number;
   uuid: string;
   duty_date: string;
   sales: number;
+  business_type: BusinessType;
+  weather?: WeatherType | null;
   created_at: string;
 };
+
+export type MealLabel =
+  | 'rice'
+  | 'noodle'
+  | 'light'
+  | 'healthy'
+  | 'supplement'
+  | 'skip';
 
 export type MealRecord = {
   id: number;
   uuid: string;
   duty_date: string;
-  meal_label: string;
+  meal_label: MealLabel;
   created_at: string;
 };
 
@@ -31,18 +50,34 @@ export const getDb = async () => {
   if (!db) {
     db = await SQLite.openDatabaseAsync('app.db');
 
-    // 売上
+    /* --- 売上テーブル --- */
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS daily_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT NOT NULL,
         duty_date TEXT NOT NULL,
         sales INTEGER NOT NULL,
+        business_type TEXT NOT NULL DEFAULT 'normal',
+        weather TEXT,
         created_at TEXT NOT NULL
       );
     `);
 
-    // 食事
+    /* --- 既存DB向け：weather列追加（安全） --- */
+    const columns: { name: string }[] = await db.getAllAsync(
+      `PRAGMA table_info(daily_records);`
+    );
+
+    const hasWeather = columns.some(c => c.name === 'weather');
+
+    if (!hasWeather) {
+      await db.execAsync(
+        `ALTER TABLE daily_records ADD COLUMN weather TEXT;`
+      );
+      console.log('weather column added');
+    }
+
+    /* --- 食事テーブル --- */
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS meal_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,25 +102,58 @@ const normalizeDutyDate = (dutyDate: string) =>
   dutyDate.slice(0, 10);
 
 /* =========
-   売上
+   売上：INSERT
 ========= */
 
 export const insertDailyRecord = async (
   uuid: string,
   dutyDate: string,
-  sales: number
+  sales: number,
+  businessType: BusinessType = 'normal'
 ) => {
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
   await db.runAsync(
     `
-    INSERT INTO daily_records (uuid, duty_date, sales, created_at)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO daily_records (
+      uuid,
+      duty_date,
+      sales,
+      business_type,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?)
     `,
-    [uuid, dateOnly, sales, new Date().toISOString()]
+    [uuid, dateOnly, sales, businessType, new Date().toISOString()]
   );
 };
+
+/* =========
+   天気：UPDATE（当日分）
+========= */
+
+export const updateWeatherByDutyDate = async (
+  uuid: string,
+  dutyDate: string,
+  weather: WeatherType
+) => {
+  const db = await getDb();
+  const dateOnly = normalizeDutyDate(dutyDate);
+
+  await db.runAsync(
+    `
+    UPDATE daily_records
+    SET weather = ?
+    WHERE uuid = ? AND duty_date = ?
+    `,
+    [weather, uuid, dateOnly]
+  );
+};
+
+/* =========
+   売上：本日合計
+========= */
 
 export const getTodayTotal = async (
   uuid: string,
@@ -107,16 +175,30 @@ export const getTodayTotal = async (
 };
 
 /* =========
-   食事
+   売上：当日レコード一覧
 ========= */
 
-export type MealLabel =
-  | 'rice'
-  | 'noodle'
-  | 'light'
-  | 'healthy'
-  | 'supplement'
-  | 'skip';
+export const getTodaySalesRecords = async (
+  uuid: string,
+  dutyDate: string
+): Promise<DailyRecord[]> => {
+  const db = await getDb();
+  const dateOnly = normalizeDutyDate(dutyDate);
+
+  return db.getAllAsync<DailyRecord>(
+    `
+    SELECT *
+    FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    ORDER BY created_at ASC
+    `,
+    [uuid, dateOnly]
+  );
+};
+
+/* =========
+   食事：INSERT
+========= */
 
 export const insertMealRecord = async (
   uuid: string,
@@ -128,12 +210,21 @@ export const insertMealRecord = async (
 
   await db.runAsync(
     `
-    INSERT INTO meal_records (uuid, duty_date, meal_label, created_at)
+    INSERT INTO meal_records (
+      uuid,
+      duty_date,
+      meal_label,
+      created_at
+    )
     VALUES (?, ?, ?, ?)
     `,
     [uuid, dateOnly, label, new Date().toISOString()]
   );
 };
+
+/* =========
+   食事：当日一覧
+========= */
 
 export const getMealRecordsByDutyDate = async (
   uuid: string,
@@ -151,4 +242,80 @@ export const getMealRecordsByDutyDate = async (
     `,
     [uuid, dateOnly]
   );
+};
+
+/* =========
+   売上：種別サマリー
+========= */
+
+export type DailySalesSummary = {
+  total: number;
+  normal: number;
+  charter: number;
+  other: number;
+};
+
+export const getDailySalesSummaryByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+): Promise<DailySalesSummary> => {
+  const db = await getDb();
+  const dateOnly = normalizeDutyDate(dutyDate);
+
+  const rows: {
+    business_type: string;
+    amount: number;
+  }[] = await db.getAllAsync(
+    `
+    SELECT
+      business_type,
+      SUM(sales) as amount
+    FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    GROUP BY business_type
+    `,
+    [uuid, dateOnly]
+  );
+
+  const summary: DailySalesSummary = {
+    total: 0,
+    normal: 0,
+    charter: 0,
+    other: 0,
+  };
+
+  rows.forEach(row => {
+    const amount = row.amount ?? 0;
+    summary.total += amount;
+
+    if (row.business_type === 'normal') summary.normal = amount;
+    if (row.business_type === 'charter') summary.charter = amount;
+    if (row.business_type === 'other') summary.other = amount;
+  });
+
+  return summary;
+};
+/* =========
+   天気：当日取得
+========= */
+
+export const getWeatherByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+): Promise<WeatherType | null> => {
+  const db = await getDb();
+  const dateOnly = dutyDate.slice(0, 10);
+
+  const rows = await db.getAllAsync<{ weather: string | null }>(
+    `
+    SELECT weather
+    FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    AND weather IS NOT NULL
+    LIMIT 1
+    `,
+    [uuid, dateOnly]
+  );
+
+  return (rows[0]?.weather as WeatherType) ?? null;
 };
