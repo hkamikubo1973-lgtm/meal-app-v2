@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { getMealRecordsByDutyDate } from '../database/mealRecords';
-import { MealRecord } from '../database/mealRecords';
+
+import { getMealRecordsByDutyDate, MealRecord } from '../database/mealRecords';
 import { MEAL_LABEL_JP } from './mealLabels';
 
 type Props = {
@@ -18,52 +18,70 @@ export default function TodayRecordList({
   const [records, setRecords] = useState<MealRecord[]>([]);
 
   useEffect(() => {
-    getMealRecordsByDutyDate(uuid, dutyDate).then(setRecords);
+    const load = async () => {
+      try {
+        const rows = await getMealRecordsByDutyDate(uuid, dutyDate);
+        setRecords(rows);
+      } catch (e) {
+        console.error('MEAL LOAD ERROR', e);
+      }
+    };
+    load();
   }, [uuid, dutyDate, refreshKey]);
 
-  const formatTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit',
+  // ===== 種類別集計 =====
+  const summary = useMemo(() => {
+    const map: Record<string, number> = {};
+    records.forEach(r => {
+      map[r.meal_label] = (map[r.meal_label] || 0) + 1;
     });
+    return map;
+  }, [records]);
+
+  if (records.length === 0) {
+    return (
+      <View style={styles.wrapper}>
+        <Text style={styles.title}>本日の記録</Text>
+        <Text style={styles.empty}>記録はまだありません</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* 見出し */}
-      <Text style={styles.summary}>
-        食事（{records.length}回）
+    <View style={styles.wrapper}>
+      {/* ヘッダ */}
+      <Text style={styles.title}>
+        本日の記録（{records.length}件）
       </Text>
 
-      {records.map((record, index) => {
-        const isLatest = index === 0;
+      {/* ===== 集計サマリー ===== */}
+      <View style={styles.summary}>
+        {Object.entries(summary).map(([label, count]) => {
+          const name =
+            MEAL_LABEL_JP[label as keyof typeof MEAL_LABEL_JP] ?? label;
+          return (
+            <Text key={label} style={styles.summaryItem}>
+              {name} ×{count}
+            </Text>
+          );
+        })}
+      </View>
+
+      {/* ===== 明細 ===== */}
+      {records.map(r => {
+        const label =
+          MEAL_LABEL_JP[r.meal_label as keyof typeof MEAL_LABEL_JP]
+            ?? r.meal_label;
+
+        const time = new Date(r.created_at).toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
 
         return (
-          <View
-            key={record.id}
-            style={[
-              styles.row,
-              isLatest && styles.latestRow,
-            ]}
-          >
-            <Text
-              style={[
-                styles.label,
-                !isLatest && styles.normalText,
-                isLatest && styles.latestText,
-              ]}
-            >
-              {MEAL_LABEL_JP[record.meal_label] ?? record.meal_label}
-            </Text>
-
-            <Text
-              style={[
-                styles.time,
-                !isLatest && styles.normalTime,
-                isLatest && styles.latestTime,
-              ]}
-            >
-              {formatTime(record.created_at)}
-            </Text>
+          <View key={r.id} style={styles.row}>
+            <Text style={styles.label}>{label}</Text>
+            <Text style={styles.time}>{time}</Text>
           </View>
         );
       })}
@@ -72,54 +90,42 @@ export default function TodayRecordList({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 8,
+  wrapper: {
+    marginTop: 16,
+    paddingHorizontal: 12,
   },
-
-  /* 見出し */
-  summary: {
+  title: {
     fontSize: 16,
-    fontWeight: 'normal',
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  empty: {
+    fontSize: 13,
+    color: '#777',
+  },
+  summary: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  summaryItem: {
+    fontSize: 12,
+    color: '#555',
+    marginRight: 8,
     marginBottom: 4,
   },
-
-  /* 行 */
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderBottomColor: '#eee',
   },
-
-  /* 通常文字（あえて薄く） */
-  normalText: {
-    color: '#666',
-    fontWeight: 'normal',
-  },
-  normalTime: {
-    color: '#888',
-  },
-
-  /* 最新1件 */
-  latestRow: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-  },
-  latestText: {
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  latestTime: {
-    fontWeight: 'bold',
-    color: '#333',
-  },
-
   label: {
-    fontSize: 16,
+    fontSize: 14,
   },
   time: {
-    fontSize: 14,
+    fontSize: 13,
+    color: '#666',
   },
 });

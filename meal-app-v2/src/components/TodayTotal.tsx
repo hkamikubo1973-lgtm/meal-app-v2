@@ -1,149 +1,259 @@
+// src/components/TodayTotal.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
 import {
-  getTodayTotal,
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+} from 'react-native';
+
+import {
+  getTodayTotalSales,
+  getMonthlyTotalSales,
   getDailySalesSummaryByDutyDate,
-  getWeatherByDutyDate,
-  WeatherType,
+  getTodayWeather,
+  updateWeatherByDutyDate,
+  insertDailyRecord,
 } from '../database/database';
+
+/* =====================
+   月次目標（仮）
+===================== */
+const MONTHLY_TARGET = 300000;
+
+const WEATHER_LIST = ['晴', '曇', '雨', '雪', '荒天'] as const;
+
+type WeatherType = typeof WEATHER_LIST[number];
 
 type Props = {
   uuid: string;
   dutyDate: string;
   refreshKey?: number;
+  onRefresh?: () => void;
 };
 
 export default function TodayTotal({
   uuid,
   dutyDate,
-  refreshKey = 0,
+  refreshKey,
+  onRefresh,
 }: Props) {
-  const [total, setTotal] = useState<number>(0);
+  const [todayTotal, setTodayTotal] = useState(0);
+  const [monthTotal, setMonthTotal] = useState(0);
   const [summary, setSummary] = useState<{
     normal: number;
     charter: number;
     other: number;
   } | null>(null);
-
   const [weather, setWeather] = useState<WeatherType | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
-  const getWeekdayJP = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const weeks = ['日', '月', '火', '水', '木', '金', '土'];
-    return weeks[d.getDay()];
+  const load = async () => {
+    const today = await getTodayTotalSales(uuid, dutyDate);
+    const month = await getMonthlyTotalSales(uuid, dutyDate);
+    const sum = await getDailySalesSummaryByDutyDate(uuid, dutyDate);
+    const w = await getTodayWeather(uuid, dutyDate);
+
+    setTodayTotal(today);
+    setMonthTotal(month);
+    setSummary(sum);
+    setWeather(w);
   };
 
   useEffect(() => {
-    const load = async () => {
-      const t = await getTodayTotal(uuid, dutyDate);
-      setTotal(t ?? 0);
-
-      const s = await getDailySalesSummaryByDutyDate(uuid, dutyDate);
-      setSummary(s);
-
-      const w = await getWeatherByDutyDate(uuid, dutyDate);
-      setWeather(w);
-    };
     load();
   }, [uuid, dutyDate, refreshKey]);
 
+  const remaining = MONTHLY_TARGET - monthTotal;
+
+  /* =====================
+     天気保存
+  ===================== */
+  const handleWeatherSelect = async (w: WeatherType) => {
+    await updateWeatherByDutyDate(uuid, dutyDate, w);
+    setWeather(w);
+    onRefresh?.();
+  };
+
+  /* =====================
+     本日の売上リセット
+     → マイナスINSERT方式（安全）
+  ===================== */
+  const handleReset = async () => {
+    Alert.alert(
+      '確認',
+      '本日の売上をリセットしますか？',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'リセット',
+          style: 'destructive',
+          onPress: async () => {
+            if (todayTotal !== 0) {
+              await insertDailyRecord(
+                uuid,
+                dutyDate,
+                -todayTotal,
+                'other'
+              );
+              await load();
+              onRefresh?.();
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <Pressable
-      onPress={() => setOpen((prev) => !prev)}
-      style={styles.box}
-    >
-      {/* タイトル＋日付 */}
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>本日の売上</Text>
-        <Text style={styles.dateInline}>
-          出庫日：{dutyDate}（{getWeekdayJP(dutyDate)}）
+    <View style={styles.wrapper}>
+      {/* ===== 今月の目標 ===== */}
+      <View style={styles.card}>
+        <Text style={styles.title}>今月の売上目標</Text>
+        <Text style={styles.amount}>
+          {MONTHLY_TARGET.toLocaleString()} 円
+        </Text>
+        <Text
+          style={[
+            styles.remaining,
+            remaining <= 0 && styles.remainingOk,
+          ]}
+        >
+          {remaining > 0
+            ? `あと ${remaining.toLocaleString()} 円`
+            : '達成 🎉'}
+        </Text>
+        <Text style={styles.sub}>
+          今月累計：{monthTotal.toLocaleString()} 円
         </Text>
       </View>
 
-      {/* 天気（あれば表示） */}
-      {weather && (
-        <Text style={styles.weather}>
-          天気：{weather}
+      {/* ===== 本日の売上 ===== */}
+      <View style={styles.card}>
+        <Text style={styles.title}>本日の売上</Text>
+        <Text style={styles.sub}>出庫日：{dutyDate}</Text>
+
+        <Text style={styles.amount}>
+          {todayTotal.toLocaleString()} 円
         </Text>
-      )}
 
-      {/* 合計 */}
-      <Text style={styles.total}>
-        {total.toLocaleString()} 円
-      </Text>
-
-      {/* ヒント */}
-      <Text style={styles.hint}>
-        {open ? '▲ タッチで詳細を閉じる' : '▼ 詳細はタッチして表示'}
-      </Text>
-
-      {/* 詳細 */}
-      {open && summary && (
-        <View style={styles.detail}>
-          <Text style={styles.detailRow}>
-            通常：{summary.normal.toLocaleString()} 円
-          </Text>
-          <Text style={styles.detailRow}>
-            貸切：{summary.charter.toLocaleString()} 円
-          </Text>
-          <Text style={styles.detailRow}>
-            その他：{summary.other.toLocaleString()} 円
-          </Text>
+        {/* --- 天気選択 --- */}
+        <View style={styles.weatherRow}>
+          {WEATHER_LIST.map(w => (
+            <Pressable
+              key={w}
+              onPress={() => handleWeatherSelect(w)}
+              style={[
+                styles.weatherButton,
+                weather === w && styles.weatherSelected,
+              ]}
+            >
+              <Text>{w}</Text>
+            </Pressable>
+          ))}
         </View>
-      )}
-    </Pressable>
+
+        <Pressable onPress={() => setOpen(v => !v)}>
+          <Text style={styles.toggle}>
+            {open ? '▲ 詳細を閉じる' : '▼ 詳細を表示'}
+          </Text>
+        </Pressable>
+
+        {open && summary && (
+          <View style={styles.detail}>
+            <Text>通常：{summary.normal.toLocaleString()} 円</Text>
+            <Text>貸切：{summary.charter.toLocaleString()} 円</Text>
+            <Text>その他：{summary.other.toLocaleString()} 円</Text>
+          </View>
+        )}
+
+        {/* --- 売上リセット --- */}
+        <Pressable style={styles.reset} onPress={handleReset}>
+          <Text style={styles.resetText}>
+            本日の売上をリセット
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
+/* =====================
+   Styles
+===================== */
 const styles = StyleSheet.create({
-  box: {
-    backgroundColor: '#F4F9FF',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    marginTop: 12,
+  wrapper: {
+    marginHorizontal: 12,
+    marginTop: 4,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
+  card: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginRight: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  dateInline: {
+  sub: {
     fontSize: 12,
     color: '#666',
   },
-  weather: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#1565C0',
-    fontWeight: '600',
-  },
-  total: {
+  amount: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginTop: 6,
+    marginVertical: 4,
   },
-  hint: {
-    marginTop: 4,
+  remaining: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '600',
+  },
+  remainingOk: {
+    color: '#2E7D32',
+  },
+  toggle: {
     fontSize: 12,
     color: '#555',
+    marginTop: 6,
   },
   detail: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#DDD',
+    marginTop: 6,
   },
-  detailRow: {
-    fontSize: 14,
-    color: '#333',
-    marginTop: 2,
+  weatherRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 6,
+  },
+  weatherButton: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  weatherSelected: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#1976D2',
+  },
+  reset: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E57373',
+    backgroundColor: '#FDECEA',
+  },
+  resetText: {
+    color: '#C62828',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

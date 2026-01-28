@@ -63,14 +63,12 @@ export const getDb = async () => {
       );
     `);
 
-    /* --- 既存DB向け：weather列追加（安全） --- */
+    /* --- weather列が無い旧DB対応 --- */
     const columns: { name: string }[] = await db.getAllAsync(
       `PRAGMA table_info(daily_records);`
     );
 
-    const hasWeather = columns.some(c => c.name === 'weather');
-
-    if (!hasWeather) {
+    if (!columns.some(c => c.name === 'weather')) {
       await db.execAsync(
         `ALTER TABLE daily_records ADD COLUMN weather TEXT;`
       );
@@ -130,7 +128,7 @@ export const insertDailyRecord = async (
 };
 
 /* =========
-   天気：UPDATE（当日分）
+   天気：UPDATE（当日）
 ========= */
 
 export const updateWeatherByDutyDate = async (
@@ -152,10 +150,10 @@ export const updateWeatherByDutyDate = async (
 };
 
 /* =========
-   売上：本日合計
+   売上：当日合計
 ========= */
 
-export const getTodayTotal = async (
+export const getTodayTotalSales = async (
   uuid: string,
   dutyDate: string
 ): Promise<number> => {
@@ -175,7 +173,7 @@ export const getTodayTotal = async (
 };
 
 /* =========
-   売上：当日レコード一覧
+   売上：当日一覧
 ========= */
 
 export const getTodaySalesRecords = async (
@@ -194,6 +192,28 @@ export const getTodaySalesRecords = async (
     `,
     [uuid, dateOnly]
   );
+};
+
+/* =========
+   売上：当日リセット（全削除）
+========= */
+
+export const resetDailySalesByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+) => {
+  const db = await getDb();
+  const dateOnly = normalizeDutyDate(dutyDate);
+
+  await db.runAsync(
+    `
+    DELETE FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    `,
+    [uuid, dateOnly]
+  );
+
+  console.log('DAILY SALES RESET', dateOnly);
 };
 
 /* =========
@@ -295,27 +315,53 @@ export const getDailySalesSummaryByDutyDate = async (
 
   return summary;
 };
+
 /* =========
    天気：当日取得
 ========= */
 
-export const getWeatherByDutyDate = async (
+export const getTodayWeather = async (
   uuid: string,
   dutyDate: string
 ): Promise<WeatherType | null> => {
   const db = await getDb();
-  const dateOnly = dutyDate.slice(0, 10);
+  const dateOnly = normalizeDutyDate(dutyDate);
 
   const rows = await db.getAllAsync<{ weather: string | null }>(
     `
     SELECT weather
     FROM daily_records
     WHERE uuid = ? AND duty_date = ?
-    AND weather IS NOT NULL
+      AND weather IS NOT NULL
+    ORDER BY created_at DESC
     LIMIT 1
     `,
     [uuid, dateOnly]
   );
 
   return (rows[0]?.weather as WeatherType) ?? null;
+};
+
+/* =========
+   今月合計
+========= */
+
+export const getMonthlyTotalSales = async (
+  uuid: string,
+  dutyDate: string
+): Promise<number> => {
+  const db = await getDb();
+  const month = dutyDate.slice(0, 7) + '%';
+
+  const rows = await db.getAllAsync<{ total: number }>(
+    `
+    SELECT COALESCE(SUM(sales), 0) AS total
+    FROM daily_records
+    WHERE uuid = ?
+      AND duty_date LIKE ?
+    `,
+    [uuid, month]
+  );
+
+  return rows[0]?.total ?? 0;
 };
