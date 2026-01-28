@@ -18,12 +18,11 @@ import {
 } from '../database/database';
 
 /* =====================
-   月次目標（仮）
+   月次目標
 ===================== */
 const MONTHLY_TARGET = 300000;
 
 const WEATHER_LIST = ['晴', '曇', '雨', '雪', '荒天'] as const;
-
 type WeatherType = typeof WEATHER_LIST[number];
 
 type Props = {
@@ -47,7 +46,7 @@ export default function TodayTotal({
     other: number;
   } | null>(null);
   const [weather, setWeather] = useState<WeatherType | null>(null);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const load = async () => {
     const today = await getTodayTotalSales(uuid, dutyDate);
@@ -78,16 +77,15 @@ export default function TodayTotal({
 
   /* =====================
      本日の売上リセット
-     → マイナスINSERT方式（安全）
   ===================== */
   const handleReset = async () => {
     Alert.alert(
-      '確認',
-      '本日の売上をリセットしますか？',
+      '売上リセット',
+      '本日の売上をすべて削除します。\nこの操作は元に戻せません。',
       [
         { text: 'キャンセル', style: 'cancel' },
         {
-          text: 'リセット',
+          text: '削除する',
           style: 'destructive',
           onPress: async () => {
             if (todayTotal !== 0) {
@@ -138,7 +136,7 @@ export default function TodayTotal({
           {todayTotal.toLocaleString()} 円
         </Text>
 
-        {/* --- 天気選択 --- */}
+        {/* 天気選択 */}
         <View style={styles.weatherRow}>
           {WEATHER_LIST.map(w => (
             <Pressable
@@ -156,7 +154,7 @@ export default function TodayTotal({
 
         <Pressable onPress={() => setOpen(v => !v)}>
           <Text style={styles.toggle}>
-            {open ? '▲ 詳細を閉じる' : '▼ 詳細を表示'}
+            {open ? '▲ 詳細を閉じる' : '▼ 詳細・売上リセット'}
           </Text>
         </Pressable>
 
@@ -165,22 +163,21 @@ export default function TodayTotal({
             <Text>通常：{summary.normal.toLocaleString()} 円</Text>
             <Text>貸切：{summary.charter.toLocaleString()} 円</Text>
             <Text>その他：{summary.other.toLocaleString()} 円</Text>
+
+            <Pressable style={styles.reset} onPress={handleReset}>
+              <Text style={styles.resetText}>
+                本日の売上をリセット
+              </Text>
+            </Pressable>
           </View>
         )}
-
-        {/* --- 売上リセット --- */}
-        <Pressable style={styles.reset} onPress={handleReset}>
-          <Text style={styles.resetText}>
-            本日の売上をリセット
-          </Text>
-        </Pressable>
       </View>
     </View>
   );
 }
 
 /* =====================
-   Styles
+   styles
 ===================== */
 const styles = StyleSheet.create({
   wrapper: {

@@ -30,37 +30,3 @@ export default function DutySearch({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  date: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  button: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: '#E3F2FD',
-  },
-  buttonText: {
-    fontSize: 13,
-    color: '#1976D2',
-    fontWeight: '600',
-  },
-});

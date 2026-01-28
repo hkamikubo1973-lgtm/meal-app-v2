@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
@@ -10,9 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { getTodayDuty } from './src/utils/getTodayDuty';
 
-// 🔽 出番検索（復活）
 import DutySearchBar from './src/components/DutySearchBar';
-
 import TodayTotal from './src/components/TodayTotal';
 import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
@@ -21,13 +20,12 @@ import TodayRecordList from './src/components/TodayRecordList';
 import { insertMealRecord } from './src/database/mealRecords';
 
 export default function App() {
-  const [uuid, setUuid] = useState<string>('');
-  const [dutyDate, setDutyDate] = useState<string>('');
-  const [reloadKey, setReloadKey] = useState<number>(0);
+  const [uuid, setUuid] = useState('');
+  const [dutyDate, setDutyDate] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const init = async () => {
-      // UUID 初期化
       const stored = await AsyncStorage.getItem('uuid');
       if (stored) {
         setUuid(stored);
@@ -37,7 +35,6 @@ export default function App() {
         setUuid(u);
       }
 
-      // 初期乗務日算出
       const today = new Date().toISOString().slice(0, 10);
       const duty = getTodayDuty({
         baseDate: today,
@@ -51,57 +48,45 @@ export default function App() {
     init();
   }, []);
 
-  // 初期化完了まで描画しない（安全）
   if (!uuid || !dutyDate) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.container}>
 
-        {/* =====================
-            出番検索（最上部）
-        ===================== */}
+        {/* 出番検索 */}
         <DutySearchBar
           dutyDate={dutyDate}
-          onChange={(nextDate: string) => {
+          onChange={(nextDate) => {
             setDutyDate(nextDate);
-            setReloadKey(v => v + 1); // 全体再読込
+            setReloadKey(v => v + 1);
           }}
         />
 
-        {/* =====================
-            売上表示（選択日）
-        ===================== */}
+        {/* 売上サマリ */}
         <TodayTotal
           uuid={uuid}
           dutyDate={dutyDate}
           refreshKey={reloadKey}
+          onRefresh={() => setReloadKey(v => v + 1)}
         />
 
-        {/* =====================
-            売上入力＋天気
-        ===================== */}
+        {/* 売上入力 */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={() => setReloadKey(v => v + 1)}
         />
 
-        {/* =====================
-            食事入力
-        ===================== */}
+        {/* 食事入力 */}
         <MealInputButtons
           onSaved={async (label) => {
-            console.log('MEAL SAVE START', label);
             await insertMealRecord(uuid, dutyDate, label);
-            console.log('MEAL SAVE DONE');
             setReloadKey(v => v + 1);
           }}
         />
 
-        {/* =====================
-            記録一覧
-        ===================== */}
+        {/* 本日の記録 */}
         <TodayRecordList
           uuid={uuid}
           dutyDate={dutyDate}
