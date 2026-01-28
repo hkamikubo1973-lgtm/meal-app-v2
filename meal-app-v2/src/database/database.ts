@@ -152,6 +152,18 @@ export const updateWeatherByDutyDate = async (
 };
 
 /* =========
+   天気：保存（UI用ラッパー）
+========= */
+
+export const saveWeather = async (
+  uuid: string,
+  dutyDate: string,
+  weather: WeatherType
+) => {
+  await updateWeatherByDutyDate(uuid, dutyDate, weather);
+};
+
+/* =========
    売上：本日合計
 ========= */
 

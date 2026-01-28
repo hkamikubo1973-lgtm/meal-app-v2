@@ -1,34 +1,60 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { saveWeather, WeatherType } from '../database/database';
 
 type Props = {
   visible: boolean;
-  onSelect: (weather: string | null) => void;
+  uuid: string;
+  dutyDate: string;
+  onSaved: () => void;
 };
 
-const weathers = ['晴', '曇', '雨', '雪', '荒天'];
+const weathers: WeatherType[] = ['晴', '曇', '雨', '雪', '荒天'];
 
-export default function WeatherPicker({ visible, onSelect }: Props) {
+export default function WeatherPicker({
+  visible,
+  uuid,
+  dutyDate,
+  onSaved,
+}: Props) {
   if (!visible) return null;
+
+  const handleSelect = async (weather: WeatherType | null) => {
+    try {
+      if (!weather) {
+        console.log('WEATHER SKIP');
+        onSaved();
+        return;
+      }
+
+      console.log('WEATHER SAVE START', weather, dutyDate);
+
+      await saveWeather(uuid, dutyDate, weather);
+
+      console.log('WEATHER SAVE DONE');
+      onSaved();
+    } catch (e) {
+      console.error('WEATHER SAVE ERROR', e);
+    }
+  };
 
   return (
     <View style={styles.wrapper}>
       <Text style={styles.title}>今日の天気は？</Text>
 
-      {/* 横一列固定 */}
       <View style={styles.buttons}>
-        {weathers.map((w) => (
+        {weathers.map(w => (
           <Pressable
             key={w}
             style={styles.weatherButton}
-            onPress={() => onSelect(w)}
+            onPress={() => handleSelect(w)}
           >
             <Text style={styles.weatherText}>{w}</Text>
           </Pressable>
         ))}
       </View>
 
-      <Pressable onPress={() => onSelect(null)}>
+      <Pressable onPress={() => handleSelect(null)}>
         <Text style={styles.skip}>スキップ</Text>
       </Pressable>
     </View>
@@ -50,8 +76,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
   },
-
-  // 🔽 横一列
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -68,7 +92,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   weatherText: {
-    fontSize: 13, // 少しだけコンパクトに
+    fontSize: 13,
     color: '#333',
     fontWeight: '600',
   },

@@ -1,22 +1,14 @@
-// src/components/RecordInputForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   Pressable,
   StyleSheet,
-  Alert,
 } from 'react-native';
 
-import {
-  insertDailyRecord,
-  updateWeatherByDutyDate,
-  BusinessType,
-  WeatherType,
-} from '../database/database';
-
 import WeatherPicker from './WeatherPicker';
+import { insertDailyRecord, BusinessType } from '../database/database';
 
 type Props = {
   uuid: string;
@@ -24,66 +16,63 @@ type Props = {
   onSaved: () => void;
 };
 
-const BUSINESS_TYPES: {
-  label: string;
-  value: BusinessType;
-}[] = [
-  { label: '通常', value: 'normal' },
-  { label: '貸切', value: 'charter' },
-  { label: 'その他', value: 'other' },
-];
-
 export default function RecordInputForm({
   uuid,
   dutyDate,
   onSaved,
 }: Props) {
   const [sales, setSales] = useState('');
-  const [type, setType] = useState<BusinessType>('normal');
-
-  // 🔽 天気UI制御
+  const [businessType, setBusinessType] =
+    useState<BusinessType>('normal');
   const [showWeather, setShowWeather] = useState(false);
 
-  const save = async () => {
-    const value = Number(sales);
-    if (!value || value <= 0) {
-      Alert.alert('金額を入力してください');
-      return;
-    }
+  const salesInputRef = useRef<TextInput>(null);
 
-    // 売上保存
-    await insertDailyRecord(uuid, dutyDate, value, type);
+  const salesNumber = Number(sales);
+  const canSave = sales !== '' && salesNumber > 0;
 
-    // 入力リセット
+  const handleSave = async () => {
+    if (!canSave) return;
+
+    await insertDailyRecord(
+      uuid,
+      dutyDate,
+      salesNumber,
+      businessType
+    );
+
     setSales('');
-    setType('normal');
-
-    // 🔽 売上保存後に天気選択を表示
+    setBusinessType('normal');
     setShowWeather(true);
-
-    // 上位に通知（集計更新用）
-    onSaved();
   };
 
   return (
-    <View style={styles.wrapper}>
-      <Text style={styles.title}>売上入力</Text>
+    <View style={styles.container}>
 
-      {/* 種別選択 */}
+      {/* ▼ 売上種別ラベル（★追加） */}
+      <Text style={styles.sectionLabel}>売上種別</Text>
+
+      {/* 売上種別 */}
       <View style={styles.typeRow}>
-        {BUSINESS_TYPES.map(t => (
+        {[
+          { key: 'normal', label: '通常' },
+          { key: 'charter', label: '貸切' },
+          { key: 'other', label: 'その他' },
+        ].map(t => (
           <Pressable
-            key={t.value}
+            key={t.key}
             style={[
               styles.typeButton,
-              type === t.value && styles.typeSelected,
+              businessType === t.key && styles.typeActive,
             ]}
-            onPress={() => setType(t.value)}
+            onPress={() =>
+              setBusinessType(t.key as BusinessType)
+            }
           >
             <Text
               style={[
                 styles.typeText,
-                type === t.value && styles.typeTextSelected,
+                businessType === t.key && styles.typeTextActive,
               ]}
             >
               {t.label}
@@ -92,8 +81,9 @@ export default function RecordInputForm({
         ))}
       </View>
 
-      {/* 金額入力 */}
+      {/* 売上入力 */}
       <TextInput
+        ref={salesInputRef}
         value={sales}
         onChangeText={setSales}
         keyboardType="number-pad"
@@ -102,22 +92,36 @@ export default function RecordInputForm({
       />
 
       {/* 保存 */}
-      <Pressable style={styles.saveButton} onPress={save}>
-        <Text style={styles.saveText}>保存</Text>
+      <Pressable
+        style={[
+          styles.saveButton,
+          !canSave && styles.saveDisabled,
+        ]}
+        onPress={handleSave}
+        disabled={!canSave}
+      >
+        <Text
+          style={[
+            styles.saveText,
+            !canSave && styles.saveTextDisabled,
+          ]}
+        >
+          保存
+        </Text>
       </Pressable>
 
-      {/* 🔽 天気選択（DB保存まで実行） */}
+      {/* 天気 */}
       <WeatherPicker
         visible={showWeather}
-        onSelect={async (weather) => {
-          if (weather) {
-            await updateWeatherByDutyDate(
-              uuid,
-              dutyDate,
-              weather as WeatherType
-            );
-          }
+        uuid={uuid}
+        dutyDate={dutyDate}
+        onSaved={() => {
           setShowWeather(false);
+          onSaved();
+
+          setTimeout(() => {
+            salesInputRef.current?.focus();
+          }, 100);
         }}
       />
     </View>
@@ -125,52 +129,64 @@ export default function RecordInputForm({
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    padding: 12,
+  container: {
+    margin: 16,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
+
+  /* ★ セクションラベル */
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 4,
   },
+
   typeRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   typeButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#eee',
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ccc',
     alignItems: 'center',
   },
-  typeSelected: {
-    backgroundColor: '#d0e8ff',
+  typeActive: {
+    backgroundColor: '#1976D2',
+    borderColor: '#1976D2',
   },
   typeText: {
-    fontSize: 14,
+    color: '#333',
     fontWeight: '600',
   },
-  typeTextSelected: {
-    color: '#005bbb',
+  typeTextActive: {
+    color: '#fff',
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    padding: 10,
     marginBottom: 8,
+    borderRadius: 6,
   },
   saveButton: {
-    backgroundColor: '#4caf50',
+    backgroundColor: '#2196F3',
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 6,
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  saveDisabled: {
+    backgroundColor: '#B0BEC5',
   },
   saveText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    fontWeight: 'bold',
+  },
+  saveTextDisabled: {
+    color: '#ECEFF1',
   },
 });
