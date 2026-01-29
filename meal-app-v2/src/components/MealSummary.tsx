@@ -1,14 +1,40 @@
+// src/components/MealSummary.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
+
 import {
   getMealRecordsByDutyDate,
-  MealRecord,
 } from '../database/database';
+
+type MealRecord = {
+  id: number;
+  meal_label?: string;   // 旧系
+  meal_type?: string;    // 新系
+  memo?: string | null;
+  created_at: string;
+};
 
 type Props = {
   uuid: string;
   dutyDate: string;
   mealRefreshKey: number;
+};
+
+/**
+ * 🔒 食事ラベル正本（表示専用）
+ */
+const MEAL_LABELS: Record<string, string> = {
+  rice: 'ごはん・丼',
+  noodle: '麺類',
+  light: '軽食・パン',
+  set: '定食',
+  healthy: '定食',
+  supplement: '補給のみ',
+  skip: '抜き',
 };
 
 export default function MealSummary({
@@ -19,10 +45,7 @@ export default function MealSummary({
   const [meals, setMeals] = useState<MealRecord[]>([]);
 
   const loadMeals = async () => {
-    const records = await getMealRecordsByDutyDate(
-      uuid,
-      dutyDate
-    );
+    const records = await getMealRecordsByDutyDate(uuid, dutyDate);
     setMeals(records);
   };
 
@@ -30,26 +53,37 @@ export default function MealSummary({
     loadMeals();
   }, [uuid, dutyDate, mealRefreshKey]);
 
-  if (meals.length === 0) {
-    return (
-      <View style={styles.card}>
-        <Text style={styles.empty}>食事記録はありません</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.card}>
       <Text style={styles.title}>本日の食事</Text>
-      {meals.map(m => (
-        <Text key={m.id} style={styles.item}>
-          ・{m.meal_label}
-        </Text>
-      ))}
+      <Text style={styles.sub}>出庫日：{dutyDate}</Text>
+
+      {meals.length === 0 ? (
+        <Text style={styles.empty}>記録はまだありません</Text>
+      ) : (
+        meals.map(m => {
+          const rawLabel = m.meal_label ?? m.meal_type ?? '';
+          const label = MEAL_LABELS[rawLabel] ?? rawLabel;
+
+          return (
+            <View key={m.id} style={styles.item}>
+              <Text style={styles.mealType}>
+                ・{label}
+              </Text>
+              {m.memo ? (
+                <Text style={styles.memo}>{m.memo}</Text>
+              ) : null}
+            </View>
+          );
+        })
+      )}
     </View>
   );
 }
 
+/* =====================
+   styles
+===================== */
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#F9FAFB',
@@ -65,12 +99,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  item: {
-    fontSize: 13,
-    marginVertical: 2,
+  sub: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 6,
   },
   empty: {
     fontSize: 12,
-    color: '#777',
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  item: {
+    marginBottom: 4,
+  },
+  mealType: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  memo: {
+    fontSize: 12,
+    color: '#555',
+    marginLeft: 8,
   },
 });

@@ -18,7 +18,7 @@ import {
 } from '../database/database';
 
 /* =====================
-   月次目標
+   月次目標（仮）
 ===================== */
 const MONTHLY_TARGET = 300000;
 
@@ -28,15 +28,15 @@ type WeatherType = typeof WEATHER_LIST[number];
 type Props = {
   uuid: string;
   dutyDate: string;
-  refreshKey?: number;
-  onRefresh?: () => void;
+  salesRefreshKey: number;
+  onSalesRefresh: () => void;
 };
 
 export default function TodayTotal({
   uuid,
   dutyDate,
-  refreshKey,
-  onRefresh,
+  salesRefreshKey,
+  onSalesRefresh,
 }: Props) {
   const [todayTotal, setTodayTotal] = useState(0);
   const [monthTotal, setMonthTotal] = useState(0);
@@ -62,7 +62,7 @@ export default function TodayTotal({
 
   useEffect(() => {
     load();
-  }, [uuid, dutyDate, refreshKey]);
+  }, [uuid, dutyDate, salesRefreshKey]);
 
   const remaining = MONTHLY_TARGET - monthTotal;
 
@@ -72,11 +72,12 @@ export default function TodayTotal({
   const handleWeatherSelect = async (w: WeatherType) => {
     await updateWeatherByDutyDate(uuid, dutyDate, w);
     setWeather(w);
-    onRefresh?.();
+    onSalesRefresh();
   };
 
   /* =====================
-     本日の売上リセット（A方式）
+     本日の売上リセット（安全版）
+     ・当日データを物理削除
   ===================== */
   const handleReset = () => {
     Alert.alert(
@@ -90,7 +91,7 @@ export default function TodayTotal({
           onPress: async () => {
             await resetDailySalesByDutyDate(uuid, dutyDate);
             await load();
-            onRefresh?.();
+            onSalesRefresh();
           },
         },
       ]
@@ -151,7 +152,8 @@ export default function TodayTotal({
           </Text>
         </Pressable>
 
-        {open && summary && (
+        {/* 詳細（売上がある時のみ） */}
+        {open && summary && todayTotal !== 0 && (
           <View style={styles.detail}>
             <Text>通常：{summary.normal.toLocaleString()} 円</Text>
             <Text>貸切：{summary.charter.toLocaleString()} 円</Text>
