@@ -1,70 +1,76 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import {
+  getMealRecordsByDutyDate,
+  MealRecord,
+} from '../database/database';
 
-type MealSummaryProps = {
-  meals: string[]; // ['healthy', 'rice', 'skip' ...]
+type Props = {
+  uuid: string;
+  dutyDate: string;
+  mealRefreshKey: number;
 };
 
-const LABEL_MAP: Record<string, string> = {
-  noodle: '麺類',
-  rice: 'ご飯もの',
-  light: '軽食・パン',
-  healthy: '健康・和食',
-  supplement: '補給のみ',
-  skip: '抜き',
-};
+export default function MealSummary({
+  uuid,
+  dutyDate,
+  mealRefreshKey,
+}: Props) {
+  const [meals, setMeals] = useState<MealRecord[]>([]);
 
-export default function MealSummary({ meals }: MealSummaryProps) {
-  const [open, setOpen] = useState(false);
+  const loadMeals = async () => {
+    const records = await getMealRecordsByDutyDate(
+      uuid,
+      dutyDate
+    );
+    setMeals(records);
+  };
 
-  if (!meals || meals.length === 0) {
-    return <Text style={styles.empty}>食事：未記録</Text>;
+  useEffect(() => {
+    loadMeals();
+  }, [uuid, dutyDate, mealRefreshKey]);
+
+  if (meals.length === 0) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.empty}>食事記録はありません</Text>
+      </View>
+    );
   }
 
-  const uniqueLabels = Array.from(new Set(meals));
-  const displayLabels = uniqueLabels
-    .map(l => LABEL_MAP[l] ?? l)
-    .join(' / ');
-
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => setOpen(!open)}>
-        <Text style={styles.summary}>
-          食事：{meals.length}件（{displayLabels}）
+    <View style={styles.card}>
+      <Text style={styles.title}>本日の食事</Text>
+      {meals.map(m => (
+        <Text key={m.id} style={styles.item}>
+          ・{m.meal_label}
         </Text>
-      </TouchableOpacity>
-
-      {open && (
-        <View style={styles.detail}>
-          {meals.map((m, idx) => (
-            <Text key={idx} style={styles.detailItem}>
-              ・{LABEL_MAP[m] ?? m}
-            </Text>
-          ))}
-        </View>
-      )}
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 8,
+  card: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  summary: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  detail: {
-    marginTop: 6,
-    paddingLeft: 8,
-  },
-  detailItem: {
+  title: {
     fontSize: 14,
-    color: '#444',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  item: {
+    fontSize: 13,
+    marginVertical: 2,
   },
   empty: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 12,
+    color: '#777',
   },
 });

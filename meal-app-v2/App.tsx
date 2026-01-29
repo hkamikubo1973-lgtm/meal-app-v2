@@ -16,6 +16,7 @@ import TodayTotal from './src/components/TodayTotal';
 import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
 import TodayRecordList from './src/components/TodayRecordList';
+import TodayTimeline from './src/components/TodayTimeline';
 
 import { insertMealRecord } from './src/database/mealRecords';
 
@@ -86,7 +87,13 @@ export default function App() {
           }}
         />
 
-        {/* 本日の記録 */}
+        {/* タイムライン（売上＋食事） */}
+        <TodayTimeline
+          uuid={uuid}
+          dutyDate={dutyDate}
+        />
+
+        {/* 本日の記録（一覧） */}
         <TodayRecordList
           uuid={uuid}
           dutyDate={dutyDate}

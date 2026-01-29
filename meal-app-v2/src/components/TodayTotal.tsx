@@ -14,7 +14,7 @@ import {
   getDailySalesSummaryByDutyDate,
   getTodayWeather,
   updateWeatherByDutyDate,
-  insertDailyRecord,
+  resetDailySalesByDutyDate,
 } from '../database/database';
 
 /* =====================
@@ -76,9 +76,9 @@ export default function TodayTotal({
   };
 
   /* =====================
-     本日の売上リセット
+     本日の売上リセット（A方式）
   ===================== */
-  const handleReset = async () => {
+  const handleReset = () => {
     Alert.alert(
       '売上リセット',
       '本日の売上をすべて削除します。\nこの操作は元に戻せません。',
@@ -88,16 +88,9 @@ export default function TodayTotal({
           text: '削除する',
           style: 'destructive',
           onPress: async () => {
-            if (todayTotal !== 0) {
-              await insertDailyRecord(
-                uuid,
-                dutyDate,
-                -todayTotal,
-                'other'
-              );
-              await load();
-              onRefresh?.();
-            }
+            await resetDailySalesByDutyDate(uuid, dutyDate);
+            await load();
+            onRefresh?.();
           },
         },
       ]

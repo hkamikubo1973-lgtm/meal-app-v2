@@ -1,3 +1,5 @@
+// src/components/RecordInputForm.tsx
+
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -8,9 +10,11 @@ import {
 } from 'react-native';
 
 import WeatherPicker from './WeatherPicker';
+
 import {
   insertDailyRecord,
   BusinessType,
+  getTodayWeather,
 } from '../database/database';
 
 type Props = {
@@ -34,9 +38,15 @@ export default function RecordInputForm({
   const salesNumber = Number(sales);
   const canSave = sales !== '' && salesNumber > 0;
 
+  /* =====================
+     売上保存
+     ・保存後は必ず onSaved()
+     ・天気は初回のみ表示
+  ===================== */
   const handleSave = async () => {
     if (!canSave) return;
 
+    // 売上保存
     await insertDailyRecord(
       uuid,
       dutyDate,
@@ -44,9 +54,23 @@ export default function RecordInputForm({
       businessType
     );
 
+    // ★ 必ず再集計させる（これが抜けていた）
+    onSaved();
+
+    // 天気が未入力なら初回のみ表示
+    const weather = await getTodayWeather(uuid, dutyDate);
+    if (!weather) {
+      setShowWeather(true);
+    }
+
+    // 入力リセット
     setSales('');
     setBusinessType('normal');
-    setShowWeather(true);
+
+    // 次の入力を楽に
+    setTimeout(() => {
+      salesInputRef.current?.focus();
+    }, 100);
   };
 
   return (
@@ -112,25 +136,22 @@ export default function RecordInputForm({
         </Text>
       </Pressable>
 
-      {/* 天気入力 */}
+      {/* 天気入力（初回のみ表示） */}
       <WeatherPicker
         visible={showWeather}
         uuid={uuid}
         dutyDate={dutyDate}
         onSaved={() => {
           setShowWeather(false);
-          onSaved();
-
-          // 次の入力を楽に
-          setTimeout(() => {
-            salesInputRef.current?.focus();
-          }, 100);
         }}
       />
     </View>
   );
 }
 
+/* =====================
+   styles
+===================== */
 const styles = StyleSheet.create({
   container: {
     margin: 16,
