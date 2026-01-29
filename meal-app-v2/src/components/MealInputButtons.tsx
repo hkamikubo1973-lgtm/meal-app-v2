@@ -1,81 +1,115 @@
+// src/components/MealInputButtons.tsx
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+} from 'react-native';
+
+import {
+  insertMealRecord,
+} from '../database/database';
 
 type Props = {
-  onSaved: (label: string) => void;
+  uuid: string;
+  dutyDate: string;
+  onMealRefresh: () => void;
 };
 
-const BUTTONS = [
-  { label: 'ごはん・丼', value: 'rice' },
-  { label: '麺類', value: 'noodle' },
-  { label: '軽食・パン', value: 'light' },
-  { label: '定食', value: 'healthy', primary: true },
-  { label: '補給のみ', value: 'supplement', sub: true },
-  { label: '抜き', value: 'skip', sub: true },
-];
+/**
+ * 🔒 食事ラベル正本
+ * 不規則勤務前提・内容ベース
+ */
+const MEAL_LABELS = {
+  rice: 'ごはん・丼',
+  noodle: '麺類',
+  light: '軽食・パン',
+  healthy: '定食',
+  supplement: '補給のみ',
+  skip: '抜き',
+} as const;
 
-export default function MealInputButtons({ onSaved }: Props) {
+type MealKey = keyof typeof MEAL_LABELS;
+
+export default function MealInputButtons({
+  uuid,
+  dutyDate,
+  onMealRefresh,
+}: Props) {
+  const handleAddMeal = async (mealKey: MealKey) => {
+    try {
+      await insertMealRecord(
+        uuid,
+        dutyDate,
+        mealKey, // ← DBにはキーを保存
+        null
+      );
+      onMealRefresh();
+    } catch (e) {
+      Alert.alert(
+        'エラー',
+        '食事の記録に失敗しました'
+      );
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {BUTTONS.map(btn => (
-        <Pressable
-          key={btn.value}
-          style={[
-            styles.button,
-            btn.primary && styles.primary,
-            btn.sub && styles.sub,
-          ]}
-          onPress={() => {
-           console.log('MEAL BUTTON PRESSED:', btn.value);
-           onSaved(btn.value);
-          }}
+    <View style={styles.card}>
+      <Text style={styles.title}>食事を記録</Text>
 
-        >
-          <Text
-            style={[
-              styles.text,
-              btn.primary && styles.primaryText,
-            ]}
+      <View style={styles.row}>
+        {(Object.keys(MEAL_LABELS) as MealKey[]).map(key => (
+          <Pressable
+            key={key}
+            style={styles.button}
+            onPress={() => handleAddMeal(key)}
           >
-            {btn.label}
-          </Text>
-        </Pressable>
-      ))}
+            <Text style={styles.buttonText}>
+              {MEAL_LABELS[key]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
 
+/* =====================
+   styles
+===================== */
 const styles = StyleSheet.create({
-  container: {
+  card: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 12,
   },
   button: {
-    width: '48%',
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // 定食（主役）
-  primary: {
-    backgroundColor: '#e0efe3',
     borderWidth: 1,
-    borderColor: '#7fbf90',
+    borderColor: '#BDBDBD',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 6,
+    marginBottom: 6,
+    backgroundColor: '#FFFFFF',
   },
-  primaryText: {
-    fontWeight: '700',
-  },
-
-  // 補給・抜き（弱め）
-  sub: {
-    backgroundColor: '#f7f7f7',
+  buttonText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

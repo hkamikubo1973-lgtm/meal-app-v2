@@ -39,6 +39,7 @@ export type MealRecord = {
   uuid: string;
   duty_date: string;
   meal_label: MealLabel;
+  memo: string | null;
   created_at: string;
 };
 
@@ -82,6 +83,7 @@ export const getDb = async () => {
         uuid TEXT NOT NULL,
         duty_date TEXT NOT NULL,
         meal_label TEXT NOT NULL,
+        memo TEXT,
         created_at TEXT NOT NULL
       );
     `);
@@ -128,7 +130,7 @@ export const insertDailyRecord = async (
 };
 
 /* =========
-   天気：UPDATE（当日）
+   天気：UPDATE
 ========= */
 
 export const updateWeatherByDutyDate = async (
@@ -147,18 +149,6 @@ export const updateWeatherByDutyDate = async (
     `,
     [weather, uuid, dateOnly]
   );
-};
-
-/* =========
-   天気：保存（UI用ラッパー）
-========= */
-
-export const saveWeather = async (
-  uuid: string,
-  dutyDate: string,
-  weather: WeatherType
-) => {
-  await updateWeatherByDutyDate(uuid, dutyDate, weather);
 };
 
 /* =========
@@ -207,35 +197,14 @@ export const getTodaySalesRecords = async (
 };
 
 /* =========
-   売上：当日リセット（全削除）
-========= */
-
-export const resetDailySalesByDutyDate = async (
-  uuid: string,
-  dutyDate: string
-) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  await db.runAsync(
-    `
-    DELETE FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, dateOnly]
-  );
-
-  console.log('DAILY SALES RESET', dateOnly);
-};
-
-/* =========
-   食事：INSERT
+   食事：INSERT（★修正ポイント）
 ========= */
 
 export const insertMealRecord = async (
   uuid: string,
   dutyDate: string,
-  label: MealLabel
+  label: MealLabel,
+  memo: string | null = null
 ) => {
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
@@ -246,11 +215,12 @@ export const insertMealRecord = async (
       uuid,
       duty_date,
       meal_label,
+      memo,
       created_at
     )
-    VALUES (?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?)
     `,
-    [uuid, dateOnly, label, new Date().toISOString()]
+    [uuid, dateOnly, label, memo, new Date().toISOString()]
   );
 };
 

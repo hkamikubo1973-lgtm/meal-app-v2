@@ -1,70 +1,118 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+// src/components/MealSummary.tsx
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
 
-type MealSummaryProps = {
-  meals: string[]; // ['healthy', 'rice', 'skip' ...]
+import {
+  getMealRecordsByDutyDate,
+} from '../database/database';
+
+type MealRecord = {
+  id: number;
+  meal_type: string; // ← DBにはキーが入る
+  memo: string | null;
+  created_at: string;
 };
 
-const LABEL_MAP: Record<string, string> = {
+type Props = {
+  uuid: string;
+  dutyDate: string;
+  mealRefreshKey: number;
+};
+
+/**
+ * 🔒 食事ラベル正本
+ * 不規則勤務前提・内容ベース
+ */
+const MEAL_LABELS: Record<string, string> = {
+  rice: 'ごはん・丼',
   noodle: '麺類',
-  rice: 'ご飯もの',
   light: '軽食・パン',
-  healthy: '健康・和食',
+  healthy: '定食',
   supplement: '補給のみ',
   skip: '抜き',
 };
 
-export default function MealSummary({ meals }: MealSummaryProps) {
-  const [open, setOpen] = useState(false);
+export default function MealSummary({
+  uuid,
+  dutyDate,
+  mealRefreshKey,
+}: Props) {
+  const [meals, setMeals] = useState<MealRecord[]>([]);
 
-  if (!meals || meals.length === 0) {
-    return <Text style={styles.empty}>食事：未記録</Text>;
-  }
+  const loadMeals = async () => {
+    const records = await getMealRecordsByDutyDate(uuid, dutyDate);
+    setMeals(records);
+  };
 
-  const uniqueLabels = Array.from(new Set(meals));
-  const displayLabels = uniqueLabels
-    .map(l => LABEL_MAP[l] ?? l)
-    .join(' / ');
+  useEffect(() => {
+    loadMeals();
+  }, [uuid, dutyDate, mealRefreshKey]);
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => setOpen(!open)}>
-        <Text style={styles.summary}>
-          食事：{meals.length}件（{displayLabels}）
-        </Text>
-      </TouchableOpacity>
+    <View style={styles.card}>
+      <Text style={styles.title}>本日の食事</Text>
+      <Text style={styles.sub}>出庫日：{dutyDate}</Text>
 
-      {open && (
-        <View style={styles.detail}>
-          {meals.map((m, idx) => (
-            <Text key={idx} style={styles.detailItem}>
-              ・{LABEL_MAP[m] ?? m}
+      {meals.length === 0 ? (
+        <Text style={styles.empty}>記録はまだありません</Text>
+      ) : (
+        meals.map(m => (
+          <View key={m.id} style={styles.item}>
+            <Text style={styles.mealType}>
+              ・{MEAL_LABELS[m.meal_type] ?? m.meal_type}
             </Text>
-          ))}
-        </View>
+            {m.memo ? (
+              <Text style={styles.memo}>{m.memo}</Text>
+            ) : null}
+          </View>
+        ))
       )}
     </View>
   );
 }
 
+/* =====================
+   styles
+===================== */
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 8,
+  card: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  summary: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  detail: {
-    marginTop: 6,
-    paddingLeft: 8,
-  },
-  detailItem: {
+  title: {
     fontSize: 14,
-    color: '#444',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  sub: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 6,
   },
   empty: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#999',
+    fontStyle: 'italic',
+  },
+  item: {
+    marginBottom: 4,
+  },
+  mealType: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  memo: {
+    fontSize: 12,
+    color: '#555',
+    marginLeft: 8,
   },
 });
