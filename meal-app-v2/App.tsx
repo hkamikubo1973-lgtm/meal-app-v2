@@ -24,7 +24,7 @@ export default function App() {
   const [uuid, setUuid] = useState<string>('');
   const [dutyDate, setDutyDate] = useState<string>('');
   const [reloadKey, setReloadKey] = useState<number>(0);
-  const [booting, setBooting] = useState(true);
+  const [booting, setBooting] = useState<boolean>(true);
 
   useEffect(() => {
     const init = async () => {
@@ -41,6 +41,7 @@ export default function App() {
           finalUuid = uuidv4();
           await AsyncStorage.setItem('uuid', finalUuid);
         }
+
         setUuid(finalUuid!);
 
         /* =========
@@ -62,7 +63,10 @@ export default function App() {
 
         setDutyDate(duty);
 
-        console.log('APP BOOT OK', { uuid: finalUuid, dutyDate: duty });
+        console.log('APP BOOT OK', {
+          uuid: finalUuid,
+          dutyDate: duty,
+        });
       } catch (e) {
         console.error('APP INIT ERROR', e);
 
@@ -79,7 +83,7 @@ export default function App() {
   }, []);
 
   /* =========
-     ローディング表示
+     起動中表示
   ========= */
   if (booting || !uuid || !dutyDate) {
     return (

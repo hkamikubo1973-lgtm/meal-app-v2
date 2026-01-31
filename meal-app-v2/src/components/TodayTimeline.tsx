@@ -1,4 +1,3 @@
-// src/components/TodayTimeline.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -8,10 +7,10 @@ import {
 
 import { getMealRecordsByDutyDate } from '../database/database';
 
-
 type Props = {
   uuid: string;
   dutyDate: string;
+  refreshKey: number; // ★ 追加
 };
 
 type MealItem = {
@@ -28,40 +27,59 @@ const MEAL_LABEL_MAP: Record<string, string> = {
   rice: 'ごはん・丼',
   noodle: '麺類',
   light: '軽食・パン',
-  set: '定食',
+  healthy: '定食',
   supplement: '補給のみ',
   skip: '抜き',
 };
 
-export default function TodayTimeline({ uuid, dutyDate }: Props) {
+export default function TodayTimeline({
+  uuid,
+  dutyDate,
+  refreshKey,
+}: Props) {
   const [items, setItems] = useState<MealItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const load = async () => {
+      setLoading(true);
       try {
         const meals = await getMealRecordsByDutyDate(uuid, dutyDate);
 
         // 時刻順（昇順）
-        const sorted = meals.sort((a, b) =>
-          a.created_at.localeCompare(b.created_at)
-        );
+        const sorted = meals
+          .slice()
+          .sort((a, b) =>
+            a.created_at.localeCompare(b.created_at)
+          );
 
-        setItems(sorted);
+        if (mounted) {
+          setItems(sorted);
+        }
       } catch (e) {
         console.error('MEAL TIMELINE LOAD ERROR', e);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     load();
-  }, [uuid, dutyDate]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [uuid, dutyDate, refreshKey]); // ★ refreshKey 監視
 
   /* ===== 読み込み中 ===== */
   if (loading) {
     return (
-      <Text style={styles.sub}>食事履歴を読み込み中...</Text>
+      <Text style={styles.sub}>
+        食事履歴を読み込み中...
+      </Text>
     );
   }
 
