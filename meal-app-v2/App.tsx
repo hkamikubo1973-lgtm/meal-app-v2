@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
+  View,
+  Text,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,38 +20,76 @@ import MealInputButtons from './src/components/MealInputButtons';
 import TodayRecordList from './src/components/TodayRecordList';
 import TodayTimeline from './src/components/TodayTimeline';
 
-import { insertMealRecord } from './src/database/mealRecords';
-
 export default function App() {
-  const [uuid, setUuid] = useState('');
-  const [dutyDate, setDutyDate] = useState('');
-  const [reloadKey, setReloadKey] = useState(0);
+  const [uuid, setUuid] = useState<string>('');
+  const [dutyDate, setDutyDate] = useState<string>('');
+  const [reloadKey, setReloadKey] = useState<number>(0);
+  const [booting, setBooting] = useState(true);
 
   useEffect(() => {
     const init = async () => {
-      const stored = await AsyncStorage.getItem('uuid');
-      if (stored) {
-        setUuid(stored);
-      } else {
-        const u = uuidv4();
-        await AsyncStorage.setItem('uuid', u);
-        setUuid(u);
+      try {
+        console.log('APP INIT START');
+
+        /* =========
+           UUID 初期化
+        ========= */
+        const stored = await AsyncStorage.getItem('uuid');
+        let finalUuid = stored;
+
+        if (!stored) {
+          finalUuid = uuidv4();
+          await AsyncStorage.setItem('uuid', finalUuid);
+        }
+        setUuid(finalUuid!);
+
+        /* =========
+           勤務日判定
+        ========= */
+        const today = new Date().toISOString().slice(0, 10);
+
+        let duty: string;
+        try {
+          duty =
+            getTodayDuty({
+              baseDate: today,
+              standardCycle: ['DUTY', 'OFF'],
+            }) ?? today;
+        } catch (e) {
+          console.warn('getTodayDuty failed, fallback to today');
+          duty = today;
+        }
+
+        setDutyDate(duty);
+
+        console.log('APP BOOT OK', { uuid: finalUuid, dutyDate: duty });
+      } catch (e) {
+        console.error('APP INIT ERROR', e);
+
+        // 最低限の復旧
+        const fallbackUuid = uuidv4();
+        setUuid(fallbackUuid);
+        setDutyDate(new Date().toISOString().slice(0, 10));
+      } finally {
+        setBooting(false);
       }
-
-      const today = new Date().toISOString().slice(0, 10);
-      const duty = getTodayDuty({
-        baseDate: today,
-        standardCycle: ['DUTY', 'OFF'],
-      });
-
-      setDutyDate(duty);
-      console.log('APP BOOT OK dutyDate=', duty);
     };
 
     init();
   }, []);
 
-  if (!uuid || !dutyDate) return null;
+  /* =========
+     ローディング表示
+  ========= */
+  if (booting || !uuid || !dutyDate) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>起動中...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -81,19 +121,19 @@ export default function App() {
 
         {/* 食事入力 */}
         <MealInputButtons
-          onSaved={async (label) => {
-            await insertMealRecord(uuid, dutyDate, label);
-            setReloadKey(v => v + 1);
-          }}
+          uuid={uuid}
+          dutyDate={dutyDate}
+          onMealRefresh={() => setReloadKey(v => v + 1)}
         />
 
         {/* タイムライン（売上＋食事） */}
         <TodayTimeline
           uuid={uuid}
           dutyDate={dutyDate}
+          refreshKey={reloadKey}
         />
 
-        {/* 本日の記録（一覧） */}
+        {/* 本日の記録一覧 */}
         <TodayRecordList
           uuid={uuid}
           dutyDate={dutyDate}
@@ -105,6 +145,9 @@ export default function App() {
   );
 }
 
+/* =====================
+   styles
+===================== */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -112,5 +155,14 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingBottom: 24,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666',
   },
 });

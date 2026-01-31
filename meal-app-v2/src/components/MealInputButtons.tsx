@@ -20,7 +20,6 @@ type Props = {
 
 /**
  * 🔒 食事ラベル正本
- * 不規則勤務前提・内容ベース
  */
 const MEAL_LABELS = {
   rice: 'ごはん・丼',
@@ -43,11 +42,11 @@ export default function MealInputButtons({
       await insertMealRecord(
         uuid,
         dutyDate,
-        mealKey, // ← DBにはキーを保存
-        null
+        mealKey   // ✅ 引数は3つだけ
       );
       onMealRefresh();
     } catch (e) {
+      console.log(e);
       Alert.alert(
         'エラー',
         '食事の記録に失敗しました'
@@ -76,9 +75,6 @@ export default function MealInputButtons({
   );
 }
 
-/* =====================
-   styles
-===================== */
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#F9FAFB',

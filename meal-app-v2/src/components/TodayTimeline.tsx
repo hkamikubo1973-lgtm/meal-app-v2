@@ -6,9 +6,8 @@ import {
   StyleSheet,
 } from 'react-native';
 
-import {
-  getMealRecordsByDutyDate,
-} from '../database/database';
+import { getMealRecordsByDutyDate } from '../database/database';
+
 
 type Props = {
   uuid: string;
