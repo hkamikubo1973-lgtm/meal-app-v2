@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
-  View,
   Text,
 } from 'react-native';
 
@@ -21,10 +20,10 @@ import TodayRecordList from './src/components/TodayRecordList';
 import TodayTimeline from './src/components/TodayTimeline';
 
 export default function App() {
-  const [uuid, setUuid] = useState('');
-  const [dutyDate, setDutyDate] = useState('');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [booting, setBooting] = useState(true);
+  const [uuid, setUuid] = useState<string>('');
+  const [dutyDate, setDutyDate] = useState<string>('');
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [booting, setBooting] = useState<boolean>(true);
 
   useEffect(() => {
     const init = async () => {
@@ -37,7 +36,7 @@ export default function App() {
         }
         setUuid(stored);
 
-        /* 勤務日 */
+        /* 勤務日（出庫日基準） */
         const today = new Date().toISOString().slice(0, 10);
         const duty =
           getTodayDuty({
@@ -84,7 +83,6 @@ export default function App() {
           refreshKey={refreshKey}
         />
 
-        {/* ② 保存後に refreshAll を必ず呼ぶ */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}

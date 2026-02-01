@@ -17,7 +17,7 @@ export default function TodayTimeline({
 
   useEffect(() => {
     load();
-  }, [uuid, dutyDate, refreshKey]); // ★ここが①の核心
+  }, [uuid, dutyDate, refreshKey]);
 
   const load = async () => {
     const rows = await getMealRecordsByDutyDate(uuid, dutyDate);
@@ -25,14 +25,19 @@ export default function TodayTimeline({
   };
 
   if (meals.length === 0) {
-    return <Text style={styles.empty}>食事記録はまだありません</Text>;
+    return (
+      <Text style={styles.empty}>
+        食事記録はまだありません
+      </Text>
+    );
   }
 
   return (
     <View>
       {meals.map(m => (
-        <Text key={m.id}>
-          {m.meal_label} {m.memo ?? ''}
+        <Text key={m.id} style={styles.item}>
+          {m.meal_label}
+          {m.memo ? ` ${m.memo}` : ''}
         </Text>
       ))}
     </View>
@@ -43,5 +48,8 @@ const styles = StyleSheet.create({
   empty: {
     paddingVertical: 8,
     color: '#666',
+  },
+  item: {
+    paddingVertical: 4,
   },
 });
