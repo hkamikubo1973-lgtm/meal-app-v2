@@ -1,123 +1,66 @@
-// src/components/MealSummary.tsx
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-} from 'react-native';
-
-import { getMealRecordsByDutyDate } from '../database/database';
-
-
-type MealRecord = {
-  id: number;
-  meal_label?: string;   // 旧系
-  meal_type?: string;    // 新系
-  memo?: string | null;
-  created_at: string;
-};
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { getMealSummaryByDate } from '../database/database';
 
 type Props = {
-  uuid: string;
-  dutyDate: string;
-  mealRefreshKey: number;
+  date: string;
+  refreshKey?: number; // 再描画トリガー用
 };
 
-/**
- * 🔒 食事ラベル正本（表示専用）
- */
-const MEAL_LABELS: Record<string, string> = {
-  rice: 'ごはん・丼',
-  noodle: '麺類',
-  light: '軽食・パン',
-  set: '定食',
-  healthy: '定食',
-  supplement: '補給のみ',
-  skip: '抜き',
-};
-
-export default function MealSummary({
-  uuid,
-  dutyDate,
-  mealRefreshKey,
-}: Props) {
-  const [meals, setMeals] = useState<MealRecord[]>([]);
-
-  const loadMeals = async () => {
-    const records = await getMealRecordsByDutyDate(uuid, dutyDate);
-    setMeals(records);
-  };
+export default function MealSummary({ date, refreshKey }: Props) {
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    loadMeals();
-  }, [uuid, dutyDate, mealRefreshKey]);
+    const load = async () => {
+      const summary = await getMealSummaryByDate(date);
+      setTotal(summary.total);
+      setCounts(summary.counts);
+    };
+    load();
+  }, [date, refreshKey]);
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>本日の食事</Text>
-      <Text style={styles.sub}>出庫日：{dutyDate}</Text>
+      <Text style={styles.title}>今日の食事</Text>
 
-      {meals.length === 0 ? (
-        <Text style={styles.empty}>記録はまだありません</Text>
-      ) : (
-        meals.map(m => {
-          const rawLabel = m.meal_label ?? m.meal_type ?? '';
-          const label = MEAL_LABELS[rawLabel] ?? rawLabel;
+      <Text style={styles.total}>合計：{total} 件</Text>
 
-          return (
-            <View key={m.id} style={styles.item}>
-              <Text style={styles.mealType}>
-                ・{label}
-              </Text>
-              {m.memo ? (
-                <Text style={styles.memo}>{m.memo}</Text>
-              ) : null}
-            </View>
-          );
-        })
+      {Object.keys(counts).length === 0 && (
+        <Text style={styles.empty}>まだ記録はありません</Text>
       )}
+
+      {Object.entries(counts).map(([key, count]) => (
+        <Text key={key} style={styles.item}>
+          ・{key}：{count}
+        </Text>
+      ))}
     </View>
   );
 }
 
-/* =====================
-   styles
-===================== */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
     padding: 12,
-    marginHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    margin: 12,
+    borderRadius: 8,
+    backgroundColor: '#f2f2f2',
   },
   title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  total: {
+    marginTop: 4,
     fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  sub: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 6,
-  },
-  empty: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
   },
   item: {
-    marginBottom: 4,
+    fontSize: 14,
+    marginTop: 2,
   },
-  mealType: {
+  empty: {
+    marginTop: 6,
     fontSize: 13,
-    fontWeight: '500',
-  },
-  memo: {
-    fontSize: 12,
-    color: '#555',
-    marginLeft: 8,
+    color: '#777',
   },
 });

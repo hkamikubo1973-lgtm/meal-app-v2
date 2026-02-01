@@ -22,7 +22,7 @@ export type DailyRecord = {
   duty_date: string;
   sales: number;
   business_type: BusinessType;
-  weather?: WeatherType | null;
+  weather: WeatherType | null;
   created_at: string;
 };
 
@@ -58,23 +58,11 @@ export const getDb = async () => {
         uuid TEXT NOT NULL,
         duty_date TEXT NOT NULL,
         sales INTEGER NOT NULL,
-        business_type TEXT NOT NULL DEFAULT 'normal',
+        business_type TEXT NOT NULL,
         weather TEXT,
         created_at TEXT NOT NULL
       );
     `);
-
-    /* --- weather列が無い旧DB対応 --- */
-    const columns: { name: string }[] = await db.getAllAsync(
-      `PRAGMA table_info(daily_records);`
-    );
-
-    if (!columns.some(c => c.name === 'weather')) {
-      await db.execAsync(
-        `ALTER TABLE daily_records ADD COLUMN weather TEXT;`
-      );
-      console.log('weather column added');
-    }
 
     /* --- 食事テーブル --- */
     await db.execAsync(`
@@ -114,6 +102,12 @@ export const insertDailyRecord = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
+  // ★ 保険：undefined 完全排除
+  const safeBusinessType: BusinessType =
+    businessType === 'charter' || businessType === 'other'
+      ? businessType
+      : 'normal';
+
   await db.runAsync(
     `
     INSERT INTO daily_records (
@@ -121,13 +115,22 @@ export const insertDailyRecord = async (
       duty_date,
       sales,
       business_type,
+      weather,
       created_at
     )
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?)
     `,
-    [uuid, dateOnly, sales, businessType, new Date().toISOString()]
+    [
+      uuid,
+      dateOnly,
+      sales,
+      safeBusinessType,
+      null,
+      new Date().toISOString(),
+    ]
   );
 };
+
 
 /* =========
    天気：UPDATE
@@ -197,7 +200,7 @@ export const getTodaySalesRecords = async (
 };
 
 /* =========
-   食事：INSERT（★修正ポイント）
+   食事：INSERT
 ========= */
 
 export const insertMealRecord = async (
@@ -264,14 +267,12 @@ export const getDailySalesSummaryByDutyDate = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  const rows: {
-    business_type: string;
+  const rows = await db.getAllAsync<{
+    business_type: BusinessType;
     amount: number;
-  }[] = await db.getAllAsync(
+  }>(
     `
-    SELECT
-      business_type,
-      SUM(sales) as amount
+    SELECT business_type, SUM(sales) as amount
     FROM daily_records
     WHERE uuid = ? AND duty_date = ?
     GROUP BY business_type
@@ -286,13 +287,9 @@ export const getDailySalesSummaryByDutyDate = async (
     other: 0,
   };
 
-  rows.forEach(row => {
-    const amount = row.amount ?? 0;
-    summary.total += amount;
-
-    if (row.business_type === 'normal') summary.normal = amount;
-    if (row.business_type === 'charter') summary.charter = amount;
-    if (row.business_type === 'other') summary.other = amount;
+  rows.forEach(r => {
+    summary.total += r.amount;
+    summary[r.business_type] = r.amount;
   });
 
   return summary;
@@ -339,11 +336,87 @@ export const getMonthlyTotalSales = async (
     `
     SELECT COALESCE(SUM(sales), 0) AS total
     FROM daily_records
-    WHERE uuid = ?
-      AND duty_date LIKE ?
+    WHERE uuid = ? AND duty_date LIKE ?
     `,
     [uuid, month]
   );
 
   return rows[0]?.total ?? 0;
+};
+
+export const getTodayTimeline = async (
+  uuid: string,
+  dutyDate: string
+) => {
+  const db = await getDb();
+  const dateOnly = dutyDate.slice(0, 10);
+
+  const sales = await db.getAllAsync<any>(
+    `
+    SELECT
+      id,
+      created_at,
+      sales as amount,
+      business_type
+    FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    `,
+    [uuid, dateOnly]
+  );
+
+  const meals = await db.getAllAsync<any>(
+    `
+    SELECT
+      id,
+      created_at,
+      meal_label,
+      memo
+    FROM meal_records
+    WHERE uuid = ? AND duty_date = ?
+    `,
+    [uuid, dateOnly]
+  );
+
+  const timeline = [
+    ...sales.map(s => ({
+      type: 'sale' as const,
+      id: s.id,
+      time: s.created_at,
+      amount: s.amount,
+      businessType: s.business_type,
+    })),
+    ...meals.map(m => ({
+      type: 'meal' as const,
+      id: m.id,
+      time: m.created_at,
+      label: m.meal_label,
+      memo: m.memo,
+    })),
+  ];
+
+  timeline.sort((a, b) =>
+    a.time < b.time ? 1 : -1
+  );
+
+  return timeline;
+};
+
+export const resetDailySalesByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+) => {
+  const db = await getDb();
+  const dateOnly = normalizeDutyDate(dutyDate);
+
+  console.log('[RESET] TRY', { uuid, dateOnly });
+
+  await db.runAsync(
+    `
+    DELETE FROM daily_records
+    WHERE uuid = ? AND duty_date = ?
+    `,
+    [uuid, dateOnly]
+  );
+
+  console.log('[RESET] DONE');
 };

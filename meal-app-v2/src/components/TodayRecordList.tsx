@@ -1,5 +1,11 @@
+// src/components/TodayRecordList.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+} from 'react-native';
 
 import {
   getDailyRecordsByDate,
@@ -29,6 +35,8 @@ export default function TodayRecordList({
     other: 0,
   });
 
+  const [open, setOpen] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       const records = await getDailyRecordsByDate(uuid, dutyDate);
@@ -54,15 +62,31 @@ export default function TodayRecordList({
   const total =
     summary.normal + summary.charter + summary.other;
 
+  // 売上ゼロ日は非表示
   if (total === 0) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>売上内訳</Text>
+      {/* タイトル（開閉） */}
+      <Pressable onPress={() => setOpen(v => !v)}>
+        <Text style={styles.title}>
+          売上内訳 {open ? '▲' : '▼'}
+        </Text>
+      </Pressable>
 
-      <Row label="通常" value={summary.normal} />
-      <Row label="貸切" value={summary.charter} />
-      <Row label="その他" value={summary.other} />
+      {/* 開いた時だけ表示 */}
+      {open && (
+        <>
+          <Row label="通常" value={summary.normal} />
+          <Row label="貸切" value={summary.charter} />
+          <Row label="その他" value={summary.other} />
+
+          {/* 将来拡張用 */}
+          <Text style={styles.detailHint}>
+            ▶ 詳細・売上リセット
+          </Text>
+        </>
+      )}
     </View>
   );
 }
@@ -87,6 +111,9 @@ function Row({
   );
 }
 
+/* =====================
+   styles
+===================== */
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 12,
@@ -112,5 +139,10 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  detailHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 6,
   },
 });

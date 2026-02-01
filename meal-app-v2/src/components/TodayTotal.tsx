@@ -28,15 +28,15 @@ type WeatherType = typeof WEATHER_LIST[number];
 type Props = {
   uuid: string;
   dutyDate: string;
-  salesRefreshKey: number;
-  onSalesRefresh: () => void;
+  refreshKey: number;
+  onRefresh: () => void;
 };
 
 export default function TodayTotal({
   uuid,
   dutyDate,
-  salesRefreshKey,
-  onSalesRefresh,
+  refreshKey,
+  onRefresh,
 }: Props) {
   const [todayTotal, setTodayTotal] = useState(0);
   const [monthTotal, setMonthTotal] = useState(0);
@@ -62,7 +62,7 @@ export default function TodayTotal({
 
   useEffect(() => {
     load();
-  }, [uuid, dutyDate, salesRefreshKey]);
+  }, [uuid, dutyDate, refreshKey]);
 
   const remaining = MONTHLY_TARGET - monthTotal;
 
@@ -72,12 +72,11 @@ export default function TodayTotal({
   const handleWeatherSelect = async (w: WeatherType) => {
     await updateWeatherByDutyDate(uuid, dutyDate, w);
     setWeather(w);
-    onSalesRefresh();
+    onRefresh();
   };
 
   /* =====================
-     本日の売上リセット（安全版）
-     ・当日データを物理削除
+     本日の売上リセット
   ===================== */
   const handleReset = () => {
     Alert.alert(
@@ -91,7 +90,7 @@ export default function TodayTotal({
           onPress: async () => {
             await resetDailySalesByDutyDate(uuid, dutyDate);
             await load();
-            onSalesRefresh();
+            onRefresh();
           },
         },
       ]
@@ -152,7 +151,6 @@ export default function TodayTotal({
           </Text>
         </Pressable>
 
-        {/* 詳細（売上がある時のみ） */}
         {open && summary && todayTotal !== 0 && (
           <View style={styles.detail}>
             <Text>通常：{summary.normal.toLocaleString()} 円</Text>

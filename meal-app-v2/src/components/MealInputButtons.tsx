@@ -10,6 +10,7 @@ import {
 
 import {
   insertMealRecord,
+  MealLabel,
 } from '../database/database';
 
 type Props = {
@@ -19,38 +20,49 @@ type Props = {
 };
 
 /**
- * 🔒 食事ラベル正本
+ * 🔒 食事ラベル正本（ここが唯一の定義）
  */
-const MEAL_LABELS = {
-  rice: 'ごはん・丼',
-  noodle: '麺類',
-  light: '軽食・パン',
-  healthy: '定食',
-  supplement: '補給のみ',
-  skip: '抜き',
-} as const;
-
-type MealKey = keyof typeof MEAL_LABELS;
+const MEAL_LABELS: { key: MealLabel; label: string }[] = [
+  { key: 'rice', label: 'ごはん・丼' },
+  { key: 'noodle', label: '麺類' },
+  { key: 'light', label: '軽食・パン' },
+  { key: 'healthy', label: '定食' },
+  { key: 'supplement', label: '補給のみ' },
+  { key: 'skip', label: '抜き' },
+];
 
 export default function MealInputButtons({
   uuid,
   dutyDate,
   onMealRefresh,
 }: Props) {
-  const handleAddMeal = async (mealKey: MealKey) => {
+
+  const handleAddMeal = async (mealLabel: MealLabel) => {
     try {
+      /** ★★★ 強制ログ（最重要） ★★★ */
+      console.log('MEAL INSERT TRY', {
+        uuid,
+        dutyDate,
+        mealLabel,
+      });
+
+      if (!mealLabel) {
+        throw new Error('mealLabel is undefined');
+      }
+
       await insertMealRecord(
         uuid,
         dutyDate,
-        mealKey   // ✅ 引数は3つだけ
+        mealLabel,
+        null
       );
+
+      console.log('MEAL INSERT OK');
+
       onMealRefresh();
     } catch (e) {
-      console.log(e);
-      Alert.alert(
-        'エラー',
-        '食事の記録に失敗しました'
-      );
+      console.error('MEAL INSERT ERROR', e);
+      Alert.alert('エラー', '食事の記録に失敗しました');
     }
   };
 
@@ -59,14 +71,14 @@ export default function MealInputButtons({
       <Text style={styles.title}>食事を記録</Text>
 
       <View style={styles.row}>
-        {(Object.keys(MEAL_LABELS) as MealKey[]).map(key => (
+        {MEAL_LABELS.map(item => (
           <Pressable
-            key={key}
+            key={item.key}
             style={styles.button}
-            onPress={() => handleAddMeal(key)}
+            onPress={() => handleAddMeal(item.key)}
           >
             <Text style={styles.buttonText}>
-              {MEAL_LABELS[key]}
+              {item.label}
             </Text>
           </Pressable>
         ))}
