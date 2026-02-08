@@ -1,5 +1,4 @@
 // src/components/RecordInputForm.tsx
-
 import React, { useState } from 'react';
 import {
   View,
@@ -33,68 +32,31 @@ export default function RecordInputForm({
   dutyDate,
   onSaved,
 }: Props) {
-  /* =====================
-     state
-  ===================== */
-
-  // TextInput 用（文字列）
   const [amountText, setAmountText] = useState('');
-
-  // 保存用（数値）
   const amount = Number(amountText);
-
   const [businessType, setBusinessType] =
     useState<BusinessType>('normal');
-
   const [saving, setSaving] = useState(false);
 
-  /* =====================
-     判定
-  ===================== */
-
   const canSave = !saving && amount > 0;
-
-  /* =====================
-     保存処理
-  ===================== */
 
   const handleSave = async () => {
     if (!canSave) return;
 
     try {
       setSaving(true);
-      console.log('[SAVE] pressed');
-
-      await insertDailyRecord(
-        uuid,
-        dutyDate,
-        amount,
-        businessType
-      );
-
-      console.log('[SAVE] DB SUCCESS');
-
-      // 入力初期化
+      await insertDailyRecord(uuid, dutyDate, amount, businessType);
       setAmountText('');
       setBusinessType('normal');
-
       Keyboard.dismiss();
-
       onSaved();
-      console.log('[SAVE] REFRESH DONE');
-    } catch (e) {
-      console.error('[SAVE] ERROR', e);
     } finally {
       setSaving(false);
     }
   };
 
-  /* =====================
-     render
-  ===================== */
-
   return (
-    <View style={styles.container}>
+    <View style={styles.card}>
       <Text style={styles.label}>売上金額（円）</Text>
 
       <TextInput
@@ -104,11 +66,11 @@ export default function RecordInputForm({
         onChangeText={(text) =>
           setAmountText(text.replace(/[^0-9]/g, ''))
         }
-        placeholder="例：3000"
+        placeholder="例：30000"
       />
 
       <View style={styles.typeRow}>
-        {BUSINESS_TYPES.map((t) => (
+        {BUSINESS_TYPES.map(t => (
           <TouchableOpacity
             key={t.key}
             style={[
@@ -146,22 +108,21 @@ export default function RecordInputForm({
   );
 }
 
-/* =====================
-   styles
-===================== */
-
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  card: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-
   label: {
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
   },
-
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -171,12 +132,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
   },
-
   typeRow: {
     flexDirection: 'row',
     marginBottom: 12,
   },
-
   typeButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -185,37 +144,30 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginRight: 8,
   },
-
   typeActive: {
     backgroundColor: '#e6f0ff',
     borderColor: '#4a90e2',
   },
-
   typeText: {
     fontSize: 13,
     color: '#333',
   },
-
   typeTextActive: {
     fontSize: 13,
     color: '#1a5fd0',
     fontWeight: 'bold',
   },
-
   saveButton: {
     borderRadius: 6,
     paddingVertical: 12,
     alignItems: 'center',
   },
-
   saveActive: {
     backgroundColor: '#4a90e2',
   },
-
   saveDisabled: {
     backgroundColor: '#ccc',
   },
-
   saveText: {
     color: '#fff',
     fontWeight: 'bold',

@@ -39,7 +39,7 @@ export type MealRecord = {
   uuid: string;
   duty_date: string;
   meal_label: MealLabel;
-  memo: string | null;
+  memo: string | null; // ★ Phase 2では未使用（互換用）
   created_at: string;
 };
 
@@ -102,7 +102,6 @@ export const insertDailyRecord = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  // ★ 保険：undefined 完全排除
   const safeBusinessType: BusinessType =
     businessType === 'charter' || businessType === 'other'
       ? businessType
@@ -130,7 +129,6 @@ export const insertDailyRecord = async (
     ]
   );
 };
-
 
 /* =========
    天気：UPDATE
@@ -200,14 +198,13 @@ export const getTodaySalesRecords = async (
 };
 
 /* =========
-   食事：INSERT
+   食事：INSERT（Phase 2 安定版 / memo不使用）
 ========= */
 
 export const insertMealRecord = async (
   uuid: string,
   dutyDate: string,
-  label: MealLabel,
-  memo: string | null = null
+  label: MealLabel
 ) => {
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
@@ -218,12 +215,11 @@ export const insertMealRecord = async (
       uuid,
       duty_date,
       meal_label,
-      memo,
       created_at
     )
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?)
     `,
-    [uuid, dateOnly, label, memo, new Date().toISOString()]
+    [uuid, dateOnly, label, new Date().toISOString()]
   );
 };
 
@@ -344,12 +340,16 @@ export const getMonthlyTotalSales = async (
   return rows[0]?.total ?? 0;
 };
 
+/* =========
+   タイムライン
+========= */
+
 export const getTodayTimeline = async (
   uuid: string,
   dutyDate: string
 ) => {
   const db = await getDb();
-  const dateOnly = dutyDate.slice(0, 10);
+  const dateOnly = normalizeDutyDate(dutyDate);
 
   const sales = await db.getAllAsync<any>(
     `
@@ -400,6 +400,10 @@ export const getTodayTimeline = async (
 
   return timeline;
 };
+
+/* =========
+   売上リセット
+========= */
 
 export const resetDailySalesByDutyDate = async (
   uuid: string,

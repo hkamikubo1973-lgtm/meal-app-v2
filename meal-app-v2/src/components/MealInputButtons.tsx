@@ -20,7 +20,7 @@ type Props = {
 };
 
 /**
- * 🔒 食事ラベル正本（ここが唯一の定義）
+ * 🔒 食事ラベル正本
  */
 const MEAL_LABELS: { key: MealLabel; label: string }[] = [
   { key: 'rice', label: 'ごはん・丼' },
@@ -36,29 +36,9 @@ export default function MealInputButtons({
   dutyDate,
   onMealRefresh,
 }: Props) {
-
   const handleAddMeal = async (mealLabel: MealLabel) => {
     try {
-      /** ★★★ 強制ログ（最重要） ★★★ */
-      console.log('MEAL INSERT TRY', {
-        uuid,
-        dutyDate,
-        mealLabel,
-      });
-
-      if (!mealLabel) {
-        throw new Error('mealLabel is undefined');
-      }
-
-      await insertMealRecord(
-        uuid,
-        dutyDate,
-        mealLabel,
-        null
-      );
-
-      console.log('MEAL INSERT OK');
-
+      await insertMealRecord(uuid, dutyDate, mealLabel, null);
       onMealRefresh();
     } catch (e) {
       console.error('MEAL INSERT ERROR', e);
@@ -70,16 +50,14 @@ export default function MealInputButtons({
     <View style={styles.card}>
       <Text style={styles.title}>食事を記録</Text>
 
-      <View style={styles.row}>
+      <View style={styles.grid}>
         {MEAL_LABELS.map(item => (
           <Pressable
             key={item.key}
             style={styles.button}
             onPress={() => handleAddMeal(item.key)}
           >
-            <Text style={styles.buttonText}>
-              {item.label}
-            </Text>
+            <Text style={styles.text}>{item.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -102,21 +80,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 6,
   },
-  row: {
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,                // ← 超重要
   },
   button: {
     borderWidth: 1,
     borderColor: '#BDBDBD',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 6,
-    marginBottom: 6,
-    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,     // ← 押しやすく、でも大きすぎない
+    backgroundColor: '#fff',
   },
-  buttonText: {
+  text: {
     fontSize: 13,
     fontWeight: '500',
   },
