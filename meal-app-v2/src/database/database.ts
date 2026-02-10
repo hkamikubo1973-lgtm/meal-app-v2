@@ -1,51 +1,11 @@
 // src/database/database.ts
 import * as SQLite from 'expo-sqlite';
 
+/* =========
+   DB本体（Async版）
+========= */
+
 let db: SQLite.SQLiteDatabase | null = null;
-
-/* =========
-   型定義
-========= */
-
-export type BusinessType = 'normal' | 'charter' | 'other';
-
-export type WeatherType =
-  | '晴'
-  | '曇'
-  | '雨'
-  | '雪'
-  | '荒天';
-
-export type DailyRecord = {
-  id: number;
-  uuid: string;
-  duty_date: string;
-  sales: number;
-  business_type: BusinessType;
-  weather: WeatherType | null;
-  created_at: string;
-};
-
-export type MealLabel =
-  | 'rice'
-  | 'noodle'
-  | 'light'
-  | 'healthy'
-  | 'supplement'
-  | 'skip';
-
-export type MealRecord = {
-  id: number;
-  uuid: string;
-  duty_date: string;
-  meal_label: MealLabel;
-  memo: string | null; // ★ Phase 2では未使用（互換用）
-  created_at: string;
-};
-
-/* =========
-   DB取得 & 初期化
-========= */
 
 export const getDb = async () => {
   if (!db) {
@@ -76,14 +36,48 @@ export const getDb = async () => {
       );
     `);
 
-    console.log('DB INIT OK');
+    console.log('DB INIT OK (ASYNC)');
   }
 
   return db;
 };
 
 /* =========
-   共通：日付正規化
+   型定義
+========= */
+
+export type BusinessType = 'normal' | 'charter' | 'other';
+export type WeatherType = '晴' | '曇' | '雨' | '雪' | '荒天';
+
+export type DailyRecord = {
+  id: number;
+  uuid: string;
+  duty_date: string;
+  sales: number;
+  business_type: BusinessType;
+  weather: WeatherType | null;
+  created_at: string;
+};
+
+export type MealLabel =
+  | 'rice'
+  | 'noodle'
+  | 'light'
+  | 'healthy'
+  | 'supplement'
+  | 'skip';
+
+export type MealRecord = {
+  id: number;
+  uuid: string;
+  duty_date: string;
+  meal_label: MealLabel;
+  memo: string | null;
+  created_at: string;
+};
+
+/* =========
+   共通
 ========= */
 
 const normalizeDutyDate = (dutyDate: string) =>
@@ -102,28 +96,22 @@ export const insertDailyRecord = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  const safeBusinessType: BusinessType =
+  const safeType: BusinessType =
     businessType === 'charter' || businessType === 'other'
       ? businessType
       : 'normal';
 
   await db.runAsync(
     `
-    INSERT INTO daily_records (
-      uuid,
-      duty_date,
-      sales,
-      business_type,
-      weather,
-      created_at
-    )
+    INSERT INTO daily_records
+      (uuid, duty_date, sales, business_type, weather, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       uuid,
       dateOnly,
       sales,
-      safeBusinessType,
+      safeType,
       null,
       new Date().toISOString(),
     ]
@@ -198,7 +186,7 @@ export const getTodaySalesRecords = async (
 };
 
 /* =========
-   食事：INSERT（Phase 2 安定版 / memo不使用）
+   食事：INSERT
 ========= */
 
 export const insertMealRecord = async (
@@ -211,12 +199,8 @@ export const insertMealRecord = async (
 
   await db.runAsync(
     `
-    INSERT INTO meal_records (
-      uuid,
-      duty_date,
-      meal_label,
-      created_at
-    )
+    INSERT INTO meal_records
+      (uuid, duty_date, meal_label, created_at)
     VALUES (?, ?, ?, ?)
     `,
     [uuid, dateOnly, label, new Date().toISOString()]
@@ -243,162 +227,6 @@ export const getMealRecordsByDutyDate = async (
     `,
     [uuid, dateOnly]
   );
-};
-
-/* =========
-   売上：種別サマリー
-========= */
-
-export type DailySalesSummary = {
-  total: number;
-  normal: number;
-  charter: number;
-  other: number;
-};
-
-export const getDailySalesSummaryByDutyDate = async (
-  uuid: string,
-  dutyDate: string
-): Promise<DailySalesSummary> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  const rows = await db.getAllAsync<{
-    business_type: BusinessType;
-    amount: number;
-  }>(
-    `
-    SELECT business_type, SUM(sales) as amount
-    FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-    GROUP BY business_type
-    `,
-    [uuid, dateOnly]
-  );
-
-  const summary: DailySalesSummary = {
-    total: 0,
-    normal: 0,
-    charter: 0,
-    other: 0,
-  };
-
-  rows.forEach(r => {
-    summary.total += r.amount;
-    summary[r.business_type] = r.amount;
-  });
-
-  return summary;
-};
-
-/* =========
-   天気：当日取得
-========= */
-
-export const getTodayWeather = async (
-  uuid: string,
-  dutyDate: string
-): Promise<WeatherType | null> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  const rows = await db.getAllAsync<{ weather: string | null }>(
-    `
-    SELECT weather
-    FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-      AND weather IS NOT NULL
-    ORDER BY created_at DESC
-    LIMIT 1
-    `,
-    [uuid, dateOnly]
-  );
-
-  return (rows[0]?.weather as WeatherType) ?? null;
-};
-
-/* =========
-   今月合計
-========= */
-
-export const getMonthlyTotalSales = async (
-  uuid: string,
-  dutyDate: string
-): Promise<number> => {
-  const db = await getDb();
-  const month = dutyDate.slice(0, 7) + '%';
-
-  const rows = await db.getAllAsync<{ total: number }>(
-    `
-    SELECT COALESCE(SUM(sales), 0) AS total
-    FROM daily_records
-    WHERE uuid = ? AND duty_date LIKE ?
-    `,
-    [uuid, month]
-  );
-
-  return rows[0]?.total ?? 0;
-};
-
-/* =========
-   タイムライン
-========= */
-
-export const getTodayTimeline = async (
-  uuid: string,
-  dutyDate: string
-) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  const sales = await db.getAllAsync<any>(
-    `
-    SELECT
-      id,
-      created_at,
-      sales as amount,
-      business_type
-    FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, dateOnly]
-  );
-
-  const meals = await db.getAllAsync<any>(
-    `
-    SELECT
-      id,
-      created_at,
-      meal_label,
-      memo
-    FROM meal_records
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, dateOnly]
-  );
-
-  const timeline = [
-    ...sales.map(s => ({
-      type: 'sale' as const,
-      id: s.id,
-      time: s.created_at,
-      amount: s.amount,
-      businessType: s.business_type,
-    })),
-    ...meals.map(m => ({
-      type: 'meal' as const,
-      id: m.id,
-      time: m.created_at,
-      label: m.meal_label,
-      memo: m.memo,
-    })),
-  ];
-
-  timeline.sort((a, b) =>
-    a.time < b.time ? 1 : -1
-  );
-
-  return timeline;
 };
 
 /* =========
