@@ -1,27 +1,40 @@
 // src/utils/getTodayInputStatus.ts
+
 import { getDb } from '../database/database';
+import { getTodayDuty } from './getTodayDuty';
 
-export interface TodayInputStatus {
+export type TodayInputStatus = {
   hasSalesRecord: boolean;
-  hasMealRecord: boolean;   // Phase1: false 固定
-  hasHealthRecord: boolean; // Phase1: false 固定
-}
-
-const todayKey = () => new Date().toISOString().slice(0, 10);
+  hasMealRecord: boolean;
+  hasHealthRecord: boolean;
+};
 
 export const getTodayInputStatus = async (): Promise<TodayInputStatus> => {
   const db = await getDb();
-  const date = todayKey();
+  const { date: dutyDate } = getTodayDuty();
 
-  const rows = await db.getAllAsync<{ cnt: number }>(`
-    SELECT COUNT(*) as cnt
-    FROM records
-    WHERE date = ?
-  `, [date]);
+  const sales = await db.getFirstAsync<{ count: number }>(
+    `
+    SELECT COUNT(*) as count
+    FROM daily_records
+    WHERE duty_date = ?
+    `,
+    [dutyDate]
+  );
 
+  const meals = await db.getFirstAsync<{ count: number }>(
+    `
+    SELECT COUNT(*) as count
+    FROM meal_records
+    WHERE duty_date = ?
+    `,
+    [dutyDate]
+  );
+
+  // Phase2では健康は未実装 → 常に false
   return {
-    hasSalesRecord: (rows[0]?.cnt ?? 0) > 0,
-    hasMealRecord: false,
+    hasSalesRecord: (sales?.count ?? 0) > 0,
+    hasMealRecord: (meals?.count ?? 0) > 0,
     hasHealthRecord: false,
   };
 };

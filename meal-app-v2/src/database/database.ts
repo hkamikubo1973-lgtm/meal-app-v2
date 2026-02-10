@@ -300,21 +300,19 @@ export const getTodayWeather = async (
   dutyDate: string
 ): Promise<WeatherType | null> => {
   const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
 
-  const rows = await db.getAllAsync<{ weather: string | null }>(
+  const result = await db.getFirstAsync<{ weather: WeatherType }>(
     `
     SELECT weather
     FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-      AND weather IS NOT NULL
-    ORDER BY created_at DESC
+    WHERE uuid = ?
+      AND duty_date = ?
     LIMIT 1
     `,
-    [uuid, dateOnly]
+    [uuid, dutyDate]
   );
 
-  return (rows[0]?.weather as WeatherType) ?? null;
+  return result?.weather ?? null;
 };
 
 /* =========

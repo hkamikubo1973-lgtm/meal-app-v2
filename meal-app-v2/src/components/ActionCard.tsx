@@ -8,11 +8,11 @@ type Props = {
 };
 
 export const ActionCard = ({ card }: Props) => {
-  if (!card.message) return null;
-
   return (
     <View style={styles.container}>
-      <Text style={styles.message}>{card.message}</Text>
+      <Text style={styles.message}>
+        {card.message ?? '【DEBUG】ActionCard mounted'}
+      </Text>
     </View>
   );
 };

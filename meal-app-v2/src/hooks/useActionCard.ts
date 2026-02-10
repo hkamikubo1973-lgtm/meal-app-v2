@@ -1,40 +1,46 @@
+// src/hooks/useActionCard.ts
 import { useEffect, useState } from 'react';
-
-/*
-  ActionCard 用の最小・安全フック
-
-  ・baseDate が未定義でも落ちない
-  ・まだ ActionCard を使わなくても問題なし
-  ・思想（非評価・非強制）を壊さない
-*/
+import { getTodayActionCard, TodayActionCard } from '../utils/getTodayActionCard';
+import { DutyConfig } from '../types/dutyModel';
 
 type ActionCardState = {
-  baseDate: string | null;
-  message: string | null;
-  status: 'idle' | 'ready';
+  card: TodayActionCard | null;
+  status: 'idle' | 'loading' | 'ready';
 };
 
-export const useActionCard = () => {
+export const useActionCard = (dutyConfig: DutyConfig) => {
   const [state, setState] = useState<ActionCardState>({
-    baseDate: null,
-    message: null,
+    card: null,
     status: 'idle',
   });
 
   useEffect(() => {
-    // ここでは「何もしない」が正解
-    // ActionCard は Phase2.5 以降で本実装予定
+    let mounted = true;
 
-    setState({
-      baseDate: null,
-      message: null,
-      status: 'idle',
-    });
-  }, []);
+    const load = async () => {
+      setState({ card: null, status: 'loading' });
+
+      try {
+        const card = await getTodayActionCard(dutyConfig);
+        if (mounted) {
+          setState({ card, status: 'ready' });
+        }
+      } catch (e) {
+        console.warn('[useActionCard] failed', e);
+        if (mounted) {
+          setState({ card: null, status: 'idle' });
+        }
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [dutyConfig]);
 
   return {
-    baseDate: state.baseDate,
-    message: state.message,
+    card: state.card,
     status: state.status,
   };
 };

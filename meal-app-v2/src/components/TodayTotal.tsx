@@ -17,6 +17,9 @@ import {
   resetDailySalesByDutyDate,
 } from '../database/database';
 
+import { ActionCard } from './ActionCard';
+import { getTodayActionCard } from '../utils/getTodayActionCard';
+
 /* =====================
    月次目標（仮）
 ===================== */
@@ -46,6 +49,12 @@ export default function TodayTotal({
     other: number;
   } | null>(null);
   const [weather, setWeather] = useState<WeatherType | null>(null);
+
+  const [actionCard, setActionCard] = useState<{
+    type: string;
+    message: string | null;
+  } | null>(null);
+
   const [open, setOpen] = useState(false);
 
   const load = async () => {
@@ -58,6 +67,19 @@ export default function TodayTotal({
     setMonthTotal(month);
     setSummary(sum);
     setWeather(w);
+
+    // ===== ActionCard 生成 =====
+    try {
+      const card = await getTodayActionCard({
+        uuid,
+        dutyDate,
+      } as any); // Phase2: 安全優先
+
+      setActionCard(card);
+    } catch (e) {
+      console.warn('[TodayTotal] ActionCard failed', e);
+      setActionCard(null);
+    }
   };
 
   useEffect(() => {
@@ -99,6 +121,12 @@ export default function TodayTotal({
 
   return (
     <View style={styles.wrapper}>
+
+      {/* ===== ActionCard ===== */}
+      {actionCard?.message && (
+        <ActionCard card={actionCard} />
+      )}
+
       {/* ===== 今月の目標 ===== */}
       <View style={styles.card}>
         <Text style={styles.title}>今月の売上目標</Text>
