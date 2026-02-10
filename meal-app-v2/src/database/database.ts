@@ -1,51 +1,11 @@
 // src/database/database.ts
 import * as SQLite from 'expo-sqlite';
 
+/* =========
+   DB本体（Async版）
+========= */
+
 let db: SQLite.SQLiteDatabase | null = null;
-
-/* =========
-   型定義
-========= */
-
-export type BusinessType = 'normal' | 'charter' | 'other';
-
-export type WeatherType =
-  | '晴'
-  | '曇'
-  | '雨'
-  | '雪'
-  | '荒天';
-
-export type DailyRecord = {
-  id: number;
-  uuid: string;
-  duty_date: string;
-  sales: number;
-  business_type: BusinessType;
-  weather: WeatherType | null;
-  created_at: string;
-};
-
-export type MealLabel =
-  | 'rice'
-  | 'noodle'
-  | 'light'
-  | 'healthy'
-  | 'supplement'
-  | 'skip';
-
-export type MealRecord = {
-  id: number;
-  uuid: string;
-  duty_date: string;
-  meal_label: MealLabel;
-  memo: string | null; // ★ Phase 2では未使用（互換用）
-  created_at: string;
-};
-
-/* =========
-   DB取得 & 初期化
-========= */
 
 export const getDb = async () => {
   if (!db) {
@@ -76,14 +36,48 @@ export const getDb = async () => {
       );
     `);
 
-    console.log('DB INIT OK');
+    console.log('DB INIT OK (ASYNC)');
   }
 
   return db;
 };
 
 /* =========
-   共通：日付正規化
+   型定義
+========= */
+
+export type BusinessType = 'normal' | 'charter' | 'other';
+export type WeatherType = '晴' | '曇' | '雨' | '雪' | '荒天';
+
+export type DailyRecord = {
+  id: number;
+  uuid: string;
+  duty_date: string;
+  sales: number;
+  business_type: BusinessType;
+  weather: WeatherType | null;
+  created_at: string;
+};
+
+export type MealLabel =
+  | 'rice'
+  | 'noodle'
+  | 'light'
+  | 'healthy'
+  | 'supplement'
+  | 'skip';
+
+export type MealRecord = {
+  id: number;
+  uuid: string;
+  duty_date: string;
+  meal_label: MealLabel;
+  memo: string | null;
+  created_at: string;
+};
+
+/* =========
+   共通
 ========= */
 
 const normalizeDutyDate = (dutyDate: string) =>
@@ -102,28 +96,22 @@ export const insertDailyRecord = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  const safeBusinessType: BusinessType =
+  const safeType: BusinessType =
     businessType === 'charter' || businessType === 'other'
       ? businessType
       : 'normal';
 
   await db.runAsync(
     `
-    INSERT INTO daily_records (
-      uuid,
-      duty_date,
-      sales,
-      business_type,
-      weather,
-      created_at
-    )
+    INSERT INTO daily_records
+      (uuid, duty_date, sales, business_type, weather, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       uuid,
       dateOnly,
       sales,
-      safeBusinessType,
+      safeType,
       null,
       new Date().toISOString(),
     ]
@@ -198,7 +186,7 @@ export const getTodaySalesRecords = async (
 };
 
 /* =========
-   食事：INSERT（Phase 2 安定版 / memo不使用）
+   食事：INSERT
 ========= */
 
 export const insertMealRecord = async (
@@ -211,12 +199,8 @@ export const insertMealRecord = async (
 
   await db.runAsync(
     `
-    INSERT INTO meal_records (
-      uuid,
-      duty_date,
-      meal_label,
-      created_at
-    )
+    INSERT INTO meal_records
+      (uuid, duty_date, meal_label, created_at)
     VALUES (?, ?, ?, ?)
     `,
     [uuid, dateOnly, label, new Date().toISOString()]
@@ -300,6 +284,7 @@ export const getTodayWeather = async (
   dutyDate: string
 ): Promise<WeatherType | null> => {
   const db = await getDb();
+  const dateOnly = normalizeDutyDate(dutyDate);
 
   const result = await db.getFirstAsync<{ weather: WeatherType }>(
     `
@@ -309,7 +294,7 @@ export const getTodayWeather = async (
       AND duty_date = ?
     LIMIT 1
     `,
-    [uuid, dutyDate]
+    [uuid, dateOnly]
   );
 
   return result?.weather ?? null;
