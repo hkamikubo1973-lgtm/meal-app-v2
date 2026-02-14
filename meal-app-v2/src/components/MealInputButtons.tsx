@@ -21,6 +21,7 @@ type Props = {
 
 /**
  * 🔒 食事ラベル正本
+ * 並び順変更はUI確認必須。
  */
 const MEAL_LABELS: { key: MealLabel; label: string }[] = [
   { key: 'rice', label: 'ごはん・丼' },
@@ -38,7 +39,7 @@ export default function MealInputButtons({
 }: Props) {
   const handleAddMeal = async (mealLabel: MealLabel) => {
     try {
-      await insertMealRecord(uuid, dutyDate, mealLabel, null);
+      await insertMealRecord(uuid, dutyDate, mealLabel);
       onMealRefresh();
     } catch (e) {
       console.error('MEAL INSERT ERROR', e);
@@ -78,21 +79,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 8,
   },
+
+  /**
+   * 🔁 2列固定グリッド
+   */
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,                // ← 超重要
+    justifyContent: 'space-between',
   },
+
+  /**
+   * 幅を揃えて2列固定
+   */
   button: {
+    flexBasis: '48%',        // ← 2列固定
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#BDBDBD',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,     // ← 押しやすく、でも大きすぎない
+    paddingVertical: 10,
+    alignItems: 'center',
     backgroundColor: '#fff',
   },
+
   text: {
     fontSize: 13,
     fontWeight: '500',

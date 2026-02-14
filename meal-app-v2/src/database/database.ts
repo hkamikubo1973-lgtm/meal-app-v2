@@ -1,3 +1,21 @@
+/**
+ * ============================================
+ * ⚠ Phase2 安定固定領域（Technical Master Ver.T1）
+ * --------------------------------------------
+ * このファイルは現在の安定構造の中核。
+ *
+ * 変更禁止領域：
+ * - duty_date ロジック
+ * - withTransactionAsync 使用部分
+ * - テーブル構造
+ *
+ * 変更する場合は：
+ * INSERT / SELECT / UPDATE を必ずセットで確認すること。
+ *
+ * 単独変更禁止。
+ * ============================================
+ */
+
 // src/database/database.ts
 import * as SQLite from 'expo-sqlite';
 
@@ -77,8 +95,16 @@ export type MealRecord = {
 };
 
 /* =========
-   共通
+   duty_date 正規化（背骨入口）
 ========= */
+
+/**
+ * 🔑 出庫日基準の最終正規化処理
+ * 
+ * すべての保存・取得はこの関数を通す。
+ * duty_date の形式変更は禁止。
+ * 変更すると全表示・集計が崩壊する可能性あり。
+ */
 
 const normalizeDutyDate = (dutyDate: string) =>
   dutyDate.slice(0, 10);

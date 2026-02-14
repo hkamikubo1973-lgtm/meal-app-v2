@@ -57,6 +57,7 @@ export default function RecordInputForm({
 
   return (
     <View style={styles.card}>
+      {/* 見出し強化 */}
       <Text style={styles.label}>売上金額（円）</Text>
 
       <TextInput
@@ -69,6 +70,7 @@ export default function RecordInputForm({
         placeholder="例：30000"
       />
 
+      {/* 種別ボタン均等化 */}
       <View style={styles.typeRow}>
         {BUSINESS_TYPES.map(t => (
           <TouchableOpacity
@@ -118,11 +120,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
+
+  /* ===== 見出し統一 ===== */
   label: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 16,       // ← 大きく
+    fontWeight: '600',  // ← 濃く
+    color: '#000',      // ← 黒
+    marginBottom: 6,
   },
+
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -130,46 +136,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 16,
-    marginBottom: 10,
-  },
-  typeRow: {
-    flexDirection: 'row',
     marginBottom: 12,
   },
+
+  /* ===== 種別均等配置 ===== */
+  typeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+
   typeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    flex: 1,               // ← 均等3分割
+    marginHorizontal: 4,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 6,
-    marginRight: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
+
   typeActive: {
     backgroundColor: '#e6f0ff',
     borderColor: '#4a90e2',
   },
+
   typeText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#333',
   },
+
   typeTextActive: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#1a5fd0',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
+
   saveButton: {
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
+
   saveActive: {
     backgroundColor: '#4a90e2',
   },
+
   saveDisabled: {
     backgroundColor: '#ccc',
   },
+
   saveText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });

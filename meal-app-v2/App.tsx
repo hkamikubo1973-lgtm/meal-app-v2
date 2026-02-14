@@ -1,3 +1,20 @@
+/**
+ * ============================================
+ * ⚠ Phase2 安定固定領域（Technical Master Ver.T1）
+ * --------------------------------------------
+ * このファイルは refreshKey による再描画制御の中核。
+ *
+ * 変更注意領域：
+ * - dutyDate 初期決定ロジック
+ * - refreshKey 管理ロジック
+ *
+ * refreshKey は保存完了後の再描画トリガー。
+ * 構造変更時は TodayTotal / Timeline / RecordList 連動確認必須。
+ *
+ * 単独変更禁止。
+ * ============================================
+ */
+
 // App.tsx
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,13 +39,23 @@ import TodayTimeline from './src/components/TodayTimeline';
 export default function App() {
   const [uuid, setUuid] = useState<string>('');
   const [dutyDate, setDutyDate] = useState<string>('');
+
+  /**
+   * 🔁 refreshKey（再描画トリガー）
+   *
+   * 保存完了後に +1 することで
+   * TodayTotal / Timeline / RecordList を再取得させる。
+   *
+   * 削除・分離・別管理禁止。
+   */
   const [refreshKey, setRefreshKey] = useState<number>(0);
+
   const [booting, setBooting] = useState<boolean>(true);
 
   useEffect(() => {
     const init = async () => {
       try {
-        /* UUID */
+        /* UUID（匿名絶縁の基盤） */
         let stored = await AsyncStorage.getItem('uuid');
         if (!stored) {
           stored = Crypto.randomUUID();
@@ -36,7 +63,12 @@ export default function App() {
         }
         setUuid(stored);
 
-        /* 勤務日（出庫日基準） */
+        /**
+         * 🔑 出庫日基準決定（背骨入口）
+         *
+         * 日跨ぎ吸収のため、表示・保存はこの dutyDate を基準とする。
+         * getTodayDuty のロジック変更時は全画面確認必須。
+         */
         const today = new Date().toISOString().slice(0, 10);
         const duty =
           getTodayDuty({
@@ -60,6 +92,10 @@ export default function App() {
     );
   }
 
+  /**
+   * 🔁 再描画実行関数
+   * 保存成功時のみ呼び出すこと。
+   */
   const refreshAll = () => setRefreshKey(v => v + 1);
 
   return (
@@ -73,7 +109,7 @@ export default function App() {
           dutyDate={dutyDate}
           onChange={(d) => {
             setDutyDate(d);
-            refreshAll();
+            refreshAll(); // dutyDate変更時は再描画必須
           }}
         />
 
