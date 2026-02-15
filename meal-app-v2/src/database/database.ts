@@ -1,23 +1,18 @@
 /**
  * ============================================
- * ⚠ Phase2 安定固定領域（Technical Master Ver.T1）
+ * ⚠ Phase2 安定固定領域（Technical Master Ver.T2）
  * --------------------------------------------
- * このファイルは現在の安定構造の中核。
- *
- * 変更禁止領域：
+ * 変更禁止：
  * - duty_date ロジック
- * - withTransactionAsync 使用部分
- * - テーブル構造
+ * - daily_records 構造
+ * - meal_records 構造
  *
- * 変更する場合は：
- * INSERT / SELECT / UPDATE を必ずセットで確認すること。
- *
- * 単独変更禁止。
+ * 追加のみ許可。
  * ============================================
  */
 
-// src/database/database.ts
 import * as SQLite from 'expo-sqlite';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /* =========
    DB本体（Async版）
@@ -54,6 +49,17 @@ export const getDb = async () => {
       );
     `);
 
+    /* --- 🆕 乗務サイクルテーブル（追加のみ） --- */
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS duty_schedule (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT NOT NULL,
+        duty_date TEXT NOT NULL,
+        duty_type TEXT NOT NULL,   -- 'work' | 'after' | 'off'
+        created_at TEXT NOT NULL
+      );
+    `);
+
     console.log('DB INIT OK (ASYNC)');
   }
 
@@ -66,6 +72,8 @@ export const getDb = async () => {
 
 export type BusinessType = 'normal' | 'charter' | 'other';
 export type WeatherType = '晴' | '曇' | '雨' | '雪' | '荒天';
+
+export type DutyType = 'work' | 'after' | 'off'; // 🆕
 
 export type DailyRecord = {
   id: number;
@@ -95,22 +103,14 @@ export type MealRecord = {
 };
 
 /* =========
-   duty_date 正規化（背骨入口）
+   duty_date 正規化
 ========= */
-
-/**
- * 🔑 出庫日基準の最終正規化処理
- * 
- * すべての保存・取得はこの関数を通す。
- * duty_date の形式変更は禁止。
- * 変更すると全表示・集計が崩壊する可能性あり。
- */
 
 const normalizeDutyDate = (dutyDate: string) =>
   dutyDate.slice(0, 10);
 
 /* =========
-   売上：INSERT
+   売上 INSERT
 ========= */
 
 export const insertDailyRecord = async (
@@ -122,11 +122,6 @@ export const insertDailyRecord = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  const safeType: BusinessType =
-    businessType === 'charter' || businessType === 'other'
-      ? businessType
-      : 'normal';
-
   await db.runAsync(
     `
     INSERT INTO daily_records
@@ -137,7 +132,7 @@ export const insertDailyRecord = async (
       uuid,
       dateOnly,
       sales,
-      safeType,
+      businessType,
       null,
       new Date().toISOString(),
     ]
@@ -145,29 +140,7 @@ export const insertDailyRecord = async (
 };
 
 /* =========
-   天気：UPDATE
-========= */
-
-export const updateWeatherByDutyDate = async (
-  uuid: string,
-  dutyDate: string,
-  weather: WeatherType
-) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  await db.runAsync(
-    `
-    UPDATE daily_records
-    SET weather = ?
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [weather, uuid, dateOnly]
-  );
-};
-
-/* =========
-   売上：本日合計
+   本日合計
 ========= */
 
 export const getTodayTotalSales = async (
@@ -190,224 +163,55 @@ export const getTodayTotalSales = async (
 };
 
 /* =========
-   売上：当日一覧
+   今月合計（締日対応）
 ========= */
 
-export const getTodaySalesRecords = async (
-  uuid: string,
-  dutyDate: string
-): Promise<DailyRecord[]> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  return db.getAllAsync<DailyRecord>(
-    `
-    SELECT *
-    FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-    ORDER BY created_at ASC
-    `,
-    [uuid, dateOnly]
-  );
+const formatDate = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 };
-
-/* =========
-   食事：INSERT
-========= */
-
-export const insertMealRecord = async (
-  uuid: string,
-  dutyDate: string,
-  label: MealLabel
-) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  await db.runAsync(
-    `
-    INSERT INTO meal_records
-      (uuid, duty_date, meal_label, created_at)
-    VALUES (?, ?, ?, ?)
-    `,
-    [uuid, dateOnly, label, new Date().toISOString()]
-  );
-};
-
-/* =========
-   食事：当日一覧
-========= */
-
-export const getMealRecordsByDutyDate = async (
-  uuid: string,
-  dutyDate: string
-): Promise<MealRecord[]> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  return db.getAllAsync<MealRecord>(
-    `
-    SELECT *
-    FROM meal_records
-    WHERE uuid = ? AND duty_date = ?
-    ORDER BY created_at DESC
-    `,
-    [uuid, dateOnly]
-  );
-};
-
-/* =========
-   売上：種別サマリー
-========= */
-
-export type DailySalesSummary = {
-  total: number;
-  normal: number;
-  charter: number;
-  other: number;
-};
-
-export const getDailySalesSummaryByDutyDate = async (
-  uuid: string,
-  dutyDate: string
-): Promise<DailySalesSummary> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  const rows = await db.getAllAsync<{
-    business_type: BusinessType;
-    amount: number;
-  }>(
-    `
-    SELECT business_type, SUM(sales) as amount
-    FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-    GROUP BY business_type
-    `,
-    [uuid, dateOnly]
-  );
-
-  const summary: DailySalesSummary = {
-    total: 0,
-    normal: 0,
-    charter: 0,
-    other: 0,
-  };
-
-  rows.forEach(r => {
-    summary.total += r.amount;
-    summary[r.business_type] = r.amount;
-  });
-
-  return summary;
-};
-
-/* =========
-   天気：当日取得
-========= */
-
-export const getTodayWeather = async (
-  uuid: string,
-  dutyDate: string
-): Promise<WeatherType | null> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  const result = await db.getFirstAsync<{ weather: WeatherType }>(
-    `
-    SELECT weather
-    FROM daily_records
-    WHERE uuid = ?
-      AND duty_date = ?
-    LIMIT 1
-    `,
-    [uuid, dateOnly]
-  );
-
-  return result?.weather ?? null;
-};
-
-/* =========
-   今月合計
-========= */
 
 export const getMonthlyTotalSales = async (
   uuid: string,
-  dutyDate: string
+  dutyDate: string,
+  closingDay: number
 ): Promise<number> => {
+
   const db = await getDb();
-  const month = dutyDate.slice(0, 7) + '%';
+
+  const current = new Date(dutyDate);
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const day = current.getDate();
+
+  let start: Date;
+  let end: Date;
+
+  if (day > closingDay) {
+    start = new Date(year, month, closingDay + 1);
+    end = new Date(year, month + 1, closingDay);
+  } else {
+    start = new Date(year, month - 1, closingDay + 1);
+    end = new Date(year, month, closingDay);
+  }
+
+  // 🔒 安全フォーマット使用（ISO禁止）
+  const startStr = formatDate(start);
+  const endStr = formatDate(end);
 
   const rows = await db.getAllAsync<{ total: number }>(
     `
     SELECT COALESCE(SUM(sales), 0) AS total
     FROM daily_records
-    WHERE uuid = ? AND duty_date LIKE ?
+    WHERE uuid = ?
+      AND duty_date BETWEEN ? AND ?
     `,
-    [uuid, month]
+    [uuid, startStr, endStr]
   );
 
   return rows[0]?.total ?? 0;
-};
-
-/* =========
-   タイムライン
-========= */
-
-export const getTodayTimeline = async (
-  uuid: string,
-  dutyDate: string
-) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
-
-  const sales = await db.getAllAsync<any>(
-    `
-    SELECT
-      id,
-      created_at,
-      sales as amount,
-      business_type
-    FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, dateOnly]
-  );
-
-  const meals = await db.getAllAsync<any>(
-    `
-    SELECT
-      id,
-      created_at,
-      meal_label,
-      memo
-    FROM meal_records
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, dateOnly]
-  );
-
-  const timeline = [
-    ...sales.map(s => ({
-      type: 'sale' as const,
-      id: s.id,
-      time: s.created_at,
-      amount: s.amount,
-      businessType: s.business_type,
-    })),
-    ...meals.map(m => ({
-      type: 'meal' as const,
-      id: m.id,
-      time: m.created_at,
-      label: m.meal_label,
-      memo: m.memo,
-    })),
-  ];
-
-  timeline.sort((a, b) =>
-    a.time < b.time ? 1 : -1
-  );
-
-  return timeline;
 };
 
 /* =========
@@ -421,8 +225,6 @@ export const resetDailySalesByDutyDate = async (
   const db = await getDb();
   const dateOnly = normalizeDutyDate(dutyDate);
 
-  console.log('[RESET] TRY', { uuid, dateOnly });
-
   await db.runAsync(
     `
     DELETE FROM daily_records
@@ -430,6 +232,73 @@ export const resetDailySalesByDutyDate = async (
     `,
     [uuid, dateOnly]
   );
+};
 
-  console.log('[RESET] DONE');
+export const getDailySalesSummaryByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+) => {
+  const db = await getDb();
+
+  const rows: any[] = await db.getAllAsync(
+    `
+    SELECT business_type, SUM(sales) as total
+    FROM daily_records
+    WHERE uuid = ?
+      AND duty_date = ?
+    GROUP BY business_type
+    `,
+    [uuid, dutyDate]
+  );
+
+  const result = {
+    normal: 0,
+    charter: 0,
+    other: 0,
+  };
+
+  rows.forEach(r => {
+    if (r.business_type in result) {
+      result[r.business_type as keyof typeof result] = r.total ?? 0;
+    }
+  });
+
+  return result;
+};
+export const getTodayWeather = async (
+  uuid: string,
+  dutyDate: string
+) => {
+  const db = await getDb();
+
+  const row: any = await db.getFirstAsync(
+    `
+    SELECT weather
+    FROM daily_records
+    WHERE uuid = ?
+      AND duty_date = ?
+    LIMIT 1
+    `,
+    [uuid, dutyDate]
+  );
+
+  return row?.weather ?? null;
+};
+
+export const updateWeatherByDutyDate = async (
+  uuid: string,
+  dutyDate: string,
+  weather: string
+) => {
+  const db = await getDb();
+
+  await db.runAsync(
+    `
+    UPDATE daily_records
+    SET weather = ?
+    WHERE uuid = ?
+      AND duty_date = ?
+    `,
+    [weather, uuid, dutyDate]
+  );
 };

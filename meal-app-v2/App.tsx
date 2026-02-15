@@ -117,6 +117,7 @@ export default function App() {
           uuid={uuid}
           dutyDate={dutyDate}
           refreshKey={refreshKey}
+          onRefresh={refreshAll}
         />
 
         <RecordInputForm

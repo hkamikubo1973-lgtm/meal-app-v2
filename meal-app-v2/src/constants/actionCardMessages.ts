@@ -1,4 +1,16 @@
 // src/constants/actionCardMessages.ts
+/**
+ * ============================================
+ * 🎴 Action Card Messages
+ * Ver.3.3.9（非監視・非催促 強化版）
+ *
+ * 原則：
+ * ・命令しない
+ * ・催促しない
+ * ・25文字前後
+ * ・乗務の区切りに寄り添う
+ * ============================================
+ */
 
 import { ActionCardType } from '../types/actionCard';
 
@@ -9,17 +21,14 @@ export const ACTION_CARD_MESSAGES: Record<ActionCardType, string[]> = {
   ],
 
   MEAL_PENDING: [
-    '食事、写真だけ残しとく？',
-    'あとで見る用に1枚いっとく？',
+    '一日お疲れ様でした。今日のご飯を一枚。',
   ],
 
   HEALTH_CHECK: [
     '体調どう？ひとことだけでも。',
-    '今日は無理しないでOK。',
   ],
 
   NEXT_DUTY: [
     '次の出番、軽く確認しとく？',
-    '明日の流れ、見ておく？',
   ],
 };

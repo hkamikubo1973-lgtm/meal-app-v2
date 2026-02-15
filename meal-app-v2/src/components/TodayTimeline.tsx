@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useEffect, useState } from 'react';
-import { getMealRecordsByDutyDate } from '../database/database';
+import { getMealRecordsByDutyDate } from '../database/mealRecords';
 
 type Props = {
   uuid: string;

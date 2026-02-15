@@ -8,10 +8,8 @@ import {
   Alert,
 } from 'react-native';
 
-import {
-  insertMealRecord,
-  MealLabel,
-} from '../database/database';
+import { insertMealRecord } from '../database/mealRecords';
+import { MealLabel } from '../types/MealLabel';
 
 type Props = {
   uuid: string;
@@ -19,10 +17,6 @@ type Props = {
   onMealRefresh: () => void;
 };
 
-/**
- * 🔒 食事ラベル正本
- * 並び順変更はUI確認必須。
- */
 const MEAL_LABELS: { key: MealLabel; label: string }[] = [
   { key: 'rice', label: 'ごはん・丼' },
   { key: 'noodle', label: '麺類' },
@@ -37,9 +31,15 @@ export default function MealInputButtons({
   dutyDate,
   onMealRefresh,
 }: Props) {
+
   const handleAddMeal = async (mealLabel: MealLabel) => {
     try {
+      console.log('Meal button pressed:', mealLabel);
+
       await insertMealRecord(uuid, dutyDate, mealLabel);
+
+      console.log('Meal inserted');
+
       onMealRefresh();
     } catch (e) {
       console.error('MEAL INSERT ERROR', e);
@@ -81,21 +81,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-
-  /**
-   * 🔁 2列固定グリッド
-   */
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-
-  /**
-   * 幅を揃えて2列固定
-   */
   button: {
-    flexBasis: '48%',        // ← 2列固定
+    flexBasis: '48%',
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#BDBDBD',
@@ -104,7 +96,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-
   text: {
     fontSize: 13,
     fontWeight: '500',

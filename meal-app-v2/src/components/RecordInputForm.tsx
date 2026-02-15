@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 import { insertDailyRecord } from '../database/database';
-import { BusinessType } from '../types/actionCard';
+import { BusinessType } from '../database/database';
 
 type Props = {
   uuid: string;

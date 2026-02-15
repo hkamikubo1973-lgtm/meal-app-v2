@@ -8,6 +8,8 @@ import {
   Alert,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
   getTodayTotalSales,
   getMonthlyTotalSales,
@@ -21,9 +23,18 @@ import { ActionCard } from './ActionCard';
 import { getTodayActionCard } from '../utils/getTodayActionCard';
 
 /* =====================
-   月次目標（仮）
+   定数
 ===================== */
-const MONTHLY_TARGET = 300000;
+
+const TARGET_OPTIONS = Array.from(
+  { length: 17 },
+  (_, i) => 200000 + i * 50000
+); // 20万〜100万（5万刻み）
+
+const CLOSING_OPTIONS = [5, 10, 15, 20, 25, 31];
+
+const TARGET_KEY = 'monthlyTarget';
+const CLOSING_DAY_KEY = 'closingDay';
 
 const WEATHER_LIST = ['晴', '曇', '雨', '雪', '荒天'] as const;
 type WeatherType = typeof WEATHER_LIST[number];
@@ -41,25 +52,48 @@ export default function TodayTotal({
   refreshKey,
   onRefresh,
 }: Props) {
+
   const [todayTotal, setTodayTotal] = useState(0);
   const [monthTotal, setMonthTotal] = useState(0);
-  const [summary, setSummary] = useState<{
-    normal: number;
-    charter: number;
-    other: number;
-  } | null>(null);
+
+  const [monthlyTarget, setMonthlyTarget] = useState<number>(450000);
+  const [closingDay, setClosingDay] = useState<number>(31);
+
+  const [targetOpen, setTargetOpen] = useState(false);
+  const [closingOpen, setClosingOpen] = useState(false);
+
+  const [summary, setSummary] = useState<any>(null);
   const [weather, setWeather] = useState<WeatherType | null>(null);
-
-  const [actionCard, setActionCard] = useState<{
-    type: string;
-    message: string | null;
-  } | null>(null);
-
+  const [actionCard, setActionCard] = useState<any>(null);
   const [open, setOpen] = useState(false);
 
+  /* =====================
+     曜日取得
+  ===================== */
+
+  const getWeekday = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const weekdays = ['日','月','火','水','木','金','土'];
+    return weekdays[d.getDay()];
+  };
+
+  /* =====================
+     初期ロード
+  ===================== */
+
   const load = async () => {
+  try {
+    const savedTarget = await AsyncStorage.getItem(TARGET_KEY);
+    const savedClosing = await AsyncStorage.getItem(CLOSING_DAY_KEY);
+
+    const target = savedTarget ? Number(savedTarget) : 450000;
+    const closing = savedClosing ? Number(savedClosing) : 31;
+
+    setMonthlyTarget(target);
+    setClosingDay(closing);
+
     const today = await getTodayTotalSales(uuid, dutyDate);
-    const month = await getMonthlyTotalSales(uuid, dutyDate);
+    const month = await getMonthlyTotalSales(uuid, dutyDate, closing);
     const sum = await getDailySalesSummaryByDutyDate(uuid, dutyDate);
     const w = await getTodayWeather(uuid, dutyDate);
 
@@ -68,29 +102,49 @@ export default function TodayTotal({
     setSummary(sum);
     setWeather(w);
 
-    // ===== ActionCard 生成 =====
-    try {
-      const card = await getTodayActionCard({
-        uuid,
-        dutyDate,
-      } as any); // Phase2: 安全優先
-
-      setActionCard(card);
-    } catch (e) {
-      console.warn('[TodayTotal] ActionCard failed', e);
-      setActionCard(null);
-    }
-  };
+    const card = await getTodayActionCard({ uuid, dutyDate } as any);
+    setActionCard(card);
+  } catch (e) {
+    console.log('LOAD ERROR:', e);
+  }
+};
 
   useEffect(() => {
     load();
   }, [uuid, dutyDate, refreshKey]);
 
-  const remaining = MONTHLY_TARGET - monthTotal;
+  const remaining = monthlyTarget - monthTotal;
+
+  /* =====================
+     目標変更
+  ===================== */
+
+  const handleTargetChange = async (value: number) => {
+    await AsyncStorage.setItem(TARGET_KEY, String(value));
+    setMonthlyTarget(value);
+    setTargetOpen(false);
+
+    const month = await getMonthlyTotalSales(uuid, dutyDate, closingDay);
+    setMonthTotal(month);
+  };
+
+  /* =====================
+     締日変更
+  ===================== */
+
+  const handleClosingChange = async (day: number) => {
+    await AsyncStorage.setItem(CLOSING_DAY_KEY, String(day));
+    setClosingDay(day);
+    setClosingOpen(false);
+
+    const month = await getMonthlyTotalSales(uuid, dutyDate, day);
+    setMonthTotal(month);
+  };
 
   /* =====================
      天気保存
   ===================== */
+
   const handleWeatherSelect = async (w: WeatherType) => {
     await updateWeatherByDutyDate(uuid, dutyDate, w);
     setWeather(w);
@@ -98,12 +152,13 @@ export default function TodayTotal({
   };
 
   /* =====================
-     本日の売上リセット
+     売上リセット
   ===================== */
+
   const handleReset = () => {
     Alert.alert(
       '売上リセット',
-      '本日の売上をすべて削除します。\nこの操作は元に戻せません。',
+      '本日の売上をすべて削除します。',
       [
         { text: 'キャンセル', style: 'cancel' },
         {
@@ -111,7 +166,6 @@ export default function TodayTotal({
           style: 'destructive',
           onPress: async () => {
             await resetDailySalesByDutyDate(uuid, dutyDate);
-            await load();
             onRefresh();
           },
         },
@@ -122,17 +176,78 @@ export default function TodayTotal({
   return (
     <View style={styles.wrapper}>
 
-      {/* ===== ActionCard ===== */}
       {actionCard?.message && (
         <ActionCard card={actionCard} />
       )}
 
-      {/* ===== 今月の目標 ===== */}
+      {/* =====================
+         今月目標カード
+      ===================== */}
       <View style={styles.card}>
         <Text style={styles.title}>今月の売上目標</Text>
-        <Text style={styles.amount}>
-          {MONTHLY_TARGET.toLocaleString()} 円
-        </Text>
+
+        <Pressable
+          style={styles.selectorRow}
+          onPress={() => setTargetOpen(v => !v)}
+        >
+          <Text style={styles.selectorLabel}>目標額：</Text>
+          <Text style={styles.selectorValue}>
+            {monthlyTarget.toLocaleString()} 円 ▼
+          </Text>
+        </Pressable>
+
+        {targetOpen && (
+          <View style={styles.optionBox}>
+            {TARGET_OPTIONS.map(v => (
+              <Pressable
+                key={v}
+                onPress={() => handleTargetChange(v)}
+                style={styles.optionItem}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    v === monthlyTarget && styles.optionSelected,
+                  ]}
+                >
+                  {v.toLocaleString()} 円
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        <Pressable
+          style={styles.selectorRow}
+          onPress={() => setClosingOpen(v => !v)}
+        >
+          <Text style={styles.selectorLabel}>締日：</Text>
+          <Text style={styles.selectorValue}>
+            {closingDay === 31 ? '月末' : `${closingDay}日`} ▼
+          </Text>
+        </Pressable>
+
+        {closingOpen && (
+          <View style={styles.optionBox}>
+            {CLOSING_OPTIONS.map(day => (
+              <Pressable
+                key={day}
+                onPress={() => handleClosingChange(day)}
+                style={styles.optionItem}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    closingDay === day && styles.optionSelected,
+                  ]}
+                >
+                  {day === 31 ? '月末' : `${day}日`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         <Text
           style={[
             styles.remaining,
@@ -143,21 +258,30 @@ export default function TodayTotal({
             ? `あと ${remaining.toLocaleString()} 円`
             : '達成 🎉'}
         </Text>
+
         <Text style={styles.sub}>
           今月累計：{monthTotal.toLocaleString()} 円
         </Text>
       </View>
 
-      {/* ===== 本日の売上 ===== */}
+      {/* =====================
+         本日の売上
+      ===================== */}
       <View style={styles.card}>
         <Text style={styles.title}>本日の売上</Text>
-        <Text style={styles.sub}>出庫日：{dutyDate}</Text>
+
+        <Text style={styles.sub}>
+          出庫基準日：{dutyDate}（{getWeekday(dutyDate)}）
+        </Text>
+
+        <Text style={styles.note}>
+          ※日付は手動変更できます
+        </Text>
 
         <Text style={styles.amount}>
           {todayTotal.toLocaleString()} 円
         </Text>
 
-        {/* 天気選択 */}
         <View style={styles.weatherRow}>
           {WEATHER_LIST.map(w => (
             <Pressable
@@ -179,11 +303,11 @@ export default function TodayTotal({
           </Text>
         </Pressable>
 
-        {open && summary && todayTotal !== 0 && (
+        {open && summary && (
           <View style={styles.detail}>
-            <Text>通常：{summary.normal.toLocaleString()} 円</Text>
-            <Text>貸切：{summary.charter.toLocaleString()} 円</Text>
-            <Text>その他：{summary.other.toLocaleString()} 円</Text>
+            <Text>通常：{summary.normal?.toLocaleString()} 円</Text>
+            <Text>貸切：{summary.charter?.toLocaleString()} 円</Text>
+            <Text>その他：{summary.other?.toLocaleString()} 円</Text>
 
             <Pressable style={styles.reset} onPress={handleReset}>
               <Text style={styles.resetText}>
@@ -200,6 +324,7 @@ export default function TodayTotal({
 /* =====================
    styles
 ===================== */
+
 const styles = StyleSheet.create({
   wrapper: {
     marginHorizontal: 12,
@@ -222,6 +347,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
+  note: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
   amount: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -234,6 +364,34 @@ const styles = StyleSheet.create({
   },
   remainingOk: {
     color: '#2E7D32',
+  },
+  selectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  selectorLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  selectorValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1976D2',
+  },
+  optionBox: {
+    marginTop: 4,
+  },
+  optionItem: {
+    paddingVertical: 4,
+  },
+  optionText: {
+    fontSize: 12,
+    color: '#555',
+  },
+  optionSelected: {
+    color: '#1976D2',
+    fontWeight: '600',
   },
   toggle: {
     fontSize: 12,
