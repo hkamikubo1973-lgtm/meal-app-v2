@@ -10,29 +10,27 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = {
-  displayDate: string; // UI表示日付
+  uuid: string;
+  dutyDate: string;
 };
 
-export default function DailyMemo({ displayDate }: Props) {
+export default function DailyMemo({ uuid, dutyDate }: Props) {
   const [open, setOpen] = useState(false);
   const [memo, setMemo] = useState('');
+  const [saved, setSaved] = useState(false);
 
-  const storageKey = `memo_${displayDate}`;
+  const storageKey = `memo_${uuid}_${dutyDate}`;
 
   /* =====================
      読み込み
   ===================== */
   useEffect(() => {
     loadMemo();
-  }, [displayDate]);
+  }, [dutyDate]);
 
   const loadMemo = async () => {
-    const saved = await AsyncStorage.getItem(storageKey);
-    if (saved) {
-      setMemo(saved);
-    } else {
-      setMemo('');
-    }
+    const savedMemo = await AsyncStorage.getItem(storageKey);
+    setMemo(savedMemo ?? '');
   };
 
   /* =====================
@@ -40,6 +38,10 @@ export default function DailyMemo({ displayDate }: Props) {
   ===================== */
   const saveMemo = async () => {
     await AsyncStorage.setItem(storageKey, memo);
+    console.log('Memo saved:', storageKey);
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   return (
@@ -63,6 +65,12 @@ export default function DailyMemo({ displayDate }: Props) {
           <Pressable style={styles.saveButton} onPress={saveMemo}>
             <Text style={styles.saveText}>保存</Text>
           </Pressable>
+
+          {saved && (
+            <Text style={styles.savedMessage}>
+              ✓ 保存しました
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -99,6 +107,12 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: '#fff',
+    fontWeight: '600',
+  },
+  savedMessage: {
+    marginTop: 6,
+    color: '#2E7D32',
+    fontSize: 12,
     fontWeight: '600',
   },
 });

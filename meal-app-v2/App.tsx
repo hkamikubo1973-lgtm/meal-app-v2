@@ -85,7 +85,11 @@ export default function App() {
         />
 
         {/* 📝 メモ（完全独立ゾーン） */}
-        <DailyMemo displayDate={dutyDate} />
+        <DailyMemo
+          uuid={uuid}
+          dutyDate={dutyDate}
+        />
+
 
         {/* 💰 売上カード */}
         <TodayTotal
