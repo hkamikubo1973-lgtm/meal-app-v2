@@ -18,7 +18,7 @@ import * as Crypto from 'expo-crypto';
 import { getTodayDuty } from './src/utils/getTodayDuty';
 
 import DutySearchBar from './src/components/DutySearchBar';
-import DailyMemo from './src/components/DailyMemo'; // ← 追加
+import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
 import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
@@ -28,9 +28,11 @@ import TodayTimeline from './src/components/TodayTimeline';
 export default function App() {
   const [uuid, setUuid] = useState<string>('');
   const [dutyDate, setDutyDate] = useState<string>('');
-
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [booting, setBooting] = useState<boolean>(true);
+
+  // ★ ＋30 / −30 表示用
+  const [jumpText, setJumpText] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -57,6 +59,15 @@ export default function App() {
     init();
   }, []);
 
+  const refreshAll = () => setRefreshKey(v => v + 1);
+
+  const showJump = (text: string) => {
+    setJumpText(text);
+    setTimeout(() => {
+      setJumpText(null);
+    }, 800);
+  };
+
   if (booting || !uuid || !dutyDate) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -64,8 +75,6 @@ export default function App() {
       </SafeAreaView>
     );
   }
-
-  const refreshAll = () => setRefreshKey(v => v + 1);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -75,19 +84,21 @@ export default function App() {
         keyboardDismissMode="on-drag"
       >
 
-        {/* 🔎 出番検索 */}
         <DutySearchBar
           dutyDate={dutyDate}
-          onChange={(d) => {
-            setDutyDate(d);
+          dutyType="乗務日"
+          jumpText={jumpText}
+          onChange={(newDate, jumpType) => {
+            setDutyDate(newDate);
             refreshAll();
+
+            if (jumpType === 'long-next') showJump('＋30');
+            if (jumpType === 'long-prev') showJump('－30');
           }}
         />
 
-        {/* 📝 メモ（完全独立ゾーン） */}
         <DailyMemo displayDate={dutyDate} />
 
-        {/* 💰 売上カード */}
         <TodayTotal
           uuid={uuid}
           dutyDate={dutyDate}
@@ -95,7 +106,6 @@ export default function App() {
           onRefresh={refreshAll}
         />
 
-        {/* 入力系 */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}
@@ -108,7 +118,6 @@ export default function App() {
           onMealRefresh={refreshAll}
         />
 
-        {/* 表示系 */}
         <TodayTimeline
           uuid={uuid}
           dutyDate={dutyDate}

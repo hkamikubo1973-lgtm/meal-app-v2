@@ -16,6 +16,7 @@ type Props = {
 export default function DailyMemo({ displayDate }: Props) {
   const [open, setOpen] = useState(false);
   const [memo, setMemo] = useState('');
+  const [saved, setSaved] = useState(false); // ★ 追加
 
   const storageKey = `memo_${displayDate}`;
 
@@ -24,12 +25,13 @@ export default function DailyMemo({ displayDate }: Props) {
   ===================== */
   useEffect(() => {
     loadMemo();
+    setSaved(false); // 日付変更時は保存表示リセット
   }, [displayDate]);
 
   const loadMemo = async () => {
-    const saved = await AsyncStorage.getItem(storageKey);
-    if (saved) {
-      setMemo(saved);
+    const savedMemo = await AsyncStorage.getItem(storageKey);
+    if (savedMemo) {
+      setMemo(savedMemo);
     } else {
       setMemo('');
     }
@@ -40,6 +42,10 @@ export default function DailyMemo({ displayDate }: Props) {
   ===================== */
   const saveMemo = async () => {
     await AsyncStorage.setItem(storageKey, memo);
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+    }, 800);
   };
 
   return (
@@ -63,6 +69,13 @@ export default function DailyMemo({ displayDate }: Props) {
           <Pressable style={styles.saveButton} onPress={saveMemo}>
             <Text style={styles.saveText}>保存</Text>
           </Pressable>
+
+          {/* ★ 保存完了メッセージ */}
+          {saved && (
+            <Text style={styles.savedText}>
+              保存しました
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -100,5 +113,11 @@ const styles = StyleSheet.create({
   saveText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  savedText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#4CAF50',
+    textAlign: 'center',
   },
 });
