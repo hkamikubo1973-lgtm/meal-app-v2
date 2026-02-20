@@ -10,31 +10,28 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = {
-  displayDate: string; // UI表示日付
+  uuid: string;
+  dutyDate: string;
 };
 
-export default function DailyMemo({ displayDate }: Props) {
+export default function DailyMemo({ uuid, dutyDate }: Props) {
   const [open, setOpen] = useState(false);
   const [memo, setMemo] = useState('');
-  const [saved, setSaved] = useState(false); // ★ 追加
+  const [saved, setSaved] = useState(false);
 
-  const storageKey = `memo_${displayDate}`;
+  const storageKey = `memo_${uuid}_${dutyDate}`;
 
   /* =====================
      読み込み
   ===================== */
   useEffect(() => {
     loadMemo();
-    setSaved(false); // 日付変更時は保存表示リセット
-  }, [displayDate]);
+    setSaved(false); // 日付変更時リセット
+  }, [dutyDate]);
 
   const loadMemo = async () => {
     const savedMemo = await AsyncStorage.getItem(storageKey);
-    if (savedMemo) {
-      setMemo(savedMemo);
-    } else {
-      setMemo('');
-    }
+    setMemo(savedMemo ?? '');
   };
 
   /* =====================
@@ -42,10 +39,9 @@ export default function DailyMemo({ displayDate }: Props) {
   ===================== */
   const saveMemo = async () => {
     await AsyncStorage.setItem(storageKey, memo);
+
     setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-    }, 800);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   return (
@@ -70,10 +66,9 @@ export default function DailyMemo({ displayDate }: Props) {
             <Text style={styles.saveText}>保存</Text>
           </Pressable>
 
-          {/* ★ 保存完了メッセージ */}
           {saved && (
-            <Text style={styles.savedText}>
-              保存しました
+            <Text style={styles.savedMessage}>
+              ✓ 保存しました
             </Text>
           )}
         </View>
@@ -114,10 +109,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  savedText: {
+  savedMessage: {
     marginTop: 6,
+    color: '#2E7D32',
     fontSize: 12,
-    color: '#4CAF50',
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

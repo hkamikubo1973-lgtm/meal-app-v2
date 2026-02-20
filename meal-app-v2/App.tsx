@@ -31,20 +31,26 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [booting, setBooting] = useState<boolean>(true);
 
-  // ★ ＋30 / −30 表示用
+  // ＋30 / −30 表示用
   const [jumpText, setJumpText] = useState<string | null>(null);
 
+  /* ============================
+     初期化
+  ============================ */
   useEffect(() => {
     const init = async () => {
       try {
         let stored = await AsyncStorage.getItem('uuid');
+
         if (!stored) {
           stored = Crypto.randomUUID();
           await AsyncStorage.setItem('uuid', stored);
         }
+
         setUuid(stored);
 
         const today = new Date().toISOString().slice(0, 10);
+
         const duty =
           getTodayDuty({
             baseDate: today,
@@ -56,18 +62,29 @@ export default function App() {
         setBooting(false);
       }
     };
+
     init();
   }, []);
 
+  /* ============================
+     全体リフレッシュ
+  ============================ */
   const refreshAll = () => setRefreshKey(v => v + 1);
 
+  /* ============================
+     ＋30 / −30 表示
+  ============================ */
   const showJump = (text: string) => {
     setJumpText(text);
+
     setTimeout(() => {
       setJumpText(null);
     }, 800);
   };
 
+  /* ============================
+     起動待ち
+  ============================ */
   if (booting || !uuid || !dutyDate) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -76,6 +93,9 @@ export default function App() {
     );
   }
 
+  /* ============================
+     メインUI
+  ============================ */
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -83,7 +103,7 @@ export default function App() {
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
       >
-
+        {/* 🚕 乗務日検索 */}
         <DutySearchBar
           dutyDate={dutyDate}
           dutyType="乗務日"
@@ -97,8 +117,13 @@ export default function App() {
           }}
         />
 
-        <DailyMemo displayDate={dutyDate} />
+        {/* 📝 メモ（完全独立ゾーン） */}
+        <DailyMemo
+          uuid={uuid}
+          dutyDate={dutyDate}
+        />
 
+        {/* 💰 売上ゾーン */}
         <TodayTotal
           uuid={uuid}
           dutyDate={dutyDate}
@@ -106,24 +131,28 @@ export default function App() {
           onRefresh={refreshAll}
         />
 
+        {/* ✏ 売上入力 */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={refreshAll}
         />
 
+        {/* 🍱 食事入力 */}
         <MealInputButtons
           uuid={uuid}
           dutyDate={dutyDate}
           onMealRefresh={refreshAll}
         />
 
+        {/* 🕒 タイムライン */}
         <TodayTimeline
           uuid={uuid}
           dutyDate={dutyDate}
           refreshKey={refreshKey}
         />
 
+        {/* 📋 記録一覧 */}
         <TodayRecordList
           uuid={uuid}
           dutyDate={dutyDate}
@@ -135,7 +164,15 @@ export default function App() {
   );
 }
 
+/* ============================
+   スタイル
+============================ */
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { paddingBottom: 24 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  container: {
+    paddingBottom: 24,
+  },
 });
