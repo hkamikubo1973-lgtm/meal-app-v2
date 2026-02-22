@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useEffect, useState } from 'react';
 import { getMealRecordsByDutyDate } from '../database/mealRecords';
+import { MEAL_LABEL_JP } from './mealLabels';
 
 type Props = {
   uuid: string;
@@ -13,6 +14,7 @@ export default function TodayTimeline({
   dutyDate,
   refreshKey,
 }: Props) {
+
   const [meals, setMeals] = useState<any[]>([]);
 
   useEffect(() => {
@@ -33,23 +35,37 @@ export default function TodayTimeline({
   }
 
   return (
-    <View>
-      {meals.map(m => (
-        <Text key={m.id} style={styles.item}>
-          {m.meal_label}
-          {m.memo ? ` ${m.memo}` : ''}
-        </Text>
-      ))}
+    <View style={styles.container}>
+      {meals.map(m => {
+        const label =
+          MEAL_LABEL_JP[m.meal_label as keyof typeof MEAL_LABEL_JP] ??
+          m.meal_label;
+
+        return (
+          <View key={m.id} style={styles.itemRow}>
+            <Text style={styles.mealType}>
+              {label}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    marginTop: 6,
+  },
   empty: {
     paddingVertical: 8,
     color: '#666',
   },
-  item: {
+  itemRow: {
     paddingVertical: 4,
+  },
+  mealType: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -17,13 +17,16 @@ import * as Crypto from 'expo-crypto';
 
 import { getTodayDuty } from './src/utils/getTodayDuty';
 
+import { ensureDailyMealMemoTable } from './src/database/mealRecords';
+
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
 import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
-import TodayRecordList from './src/components/TodayRecordList';
+import DailyMealSummary from './src/components/DailyMealSummary'; // ← 追加
 import TodayTimeline from './src/components/TodayTimeline';
+import TodayRecordList from './src/components/TodayRecordList';
 
 export default function App() {
   const [uuid, setUuid] = useState<string>('');
@@ -31,7 +34,6 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [booting, setBooting] = useState<boolean>(true);
 
-  // ＋30 / −30 表示用
   const [jumpText, setJumpText] = useState<string | null>(null);
 
   /* ============================
@@ -40,6 +42,9 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
+        // 🔹 新テーブル生成（安全）
+        await ensureDailyMealMemoTable();
+
         let stored = await AsyncStorage.getItem('uuid');
 
         if (!stored) {
@@ -76,15 +81,11 @@ export default function App() {
   ============================ */
   const showJump = (text: string) => {
     setJumpText(text);
-
     setTimeout(() => {
       setJumpText(null);
     }, 800);
   };
 
-  /* ============================
-     起動待ち
-  ============================ */
   if (booting || !uuid || !dutyDate) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -103,7 +104,7 @@ export default function App() {
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
       >
-        {/* 🚕 乗務日検索 */}
+
         <DutySearchBar
           dutyDate={dutyDate}
           dutyType="乗務日"
@@ -117,13 +118,11 @@ export default function App() {
           }}
         />
 
-        {/* 📝 メモ（完全独立ゾーン） */}
         <DailyMemo
           uuid={uuid}
           dutyDate={dutyDate}
         />
 
-        {/* 💰 売上ゾーン */}
         <TodayTotal
           uuid={uuid}
           dutyDate={dutyDate}
@@ -131,28 +130,33 @@ export default function App() {
           onRefresh={refreshAll}
         />
 
-        {/* ✏ 売上入力 */}
         <RecordInputForm
           uuid={uuid}
           dutyDate={dutyDate}
           onSaved={refreshAll}
         />
 
-        {/* 🍱 食事入力 */}
         <MealInputButtons
           uuid={uuid}
           dutyDate={dutyDate}
           onMealRefresh={refreshAll}
         />
 
-        {/* 🕒 タイムライン */}
+        {/* =====================
+           今日の食事まとめ
+        ===================== */}
+        <DailyMealSummary
+          uuid={uuid}
+          dutyDate={dutyDate}
+          refreshKey={refreshKey}
+        />
+
         <TodayTimeline
           uuid={uuid}
           dutyDate={dutyDate}
           refreshKey={refreshKey}
         />
 
-        {/* 📋 記録一覧 */}
         <TodayRecordList
           uuid={uuid}
           dutyDate={dutyDate}
@@ -164,9 +168,6 @@ export default function App() {
   );
 }
 
-/* ============================
-   スタイル
-============================ */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

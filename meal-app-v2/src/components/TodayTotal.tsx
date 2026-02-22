@@ -316,8 +316,8 @@ export default function TodayTotal({
             </Pressable>
           </View>
         )}
-      </View>
-    </View>
+            </View>
+          </View>
   );
 }
 

@@ -33,6 +33,21 @@ export default function DutySearchBar({
     onChange(newDate, jumpType);
   };
 
+  /* ===== dutyType カラー分岐 ===== */
+  const getDutyColor = () => {
+    switch (dutyType) {
+      case '出番':
+      case '乗務日':
+        return '#000';
+      case '明け':
+        return '#1976D2';
+      case '公休':
+        return '#777';
+      default:
+        return '#AAA';
+    }
+  };
+
   return (
     <View style={styles.wrapper}>
 
@@ -63,7 +78,15 @@ export default function DutySearchBar({
 
         <View style={styles.center}>
           <Text style={styles.date}>{dutyDate}</Text>
-          <Text style={styles.dutyType}>{dutyType}</Text>
+
+          <Text
+            style={[
+              styles.dutyType,
+              { color: getDutyColor() },
+            ]}
+          >
+            {dutyType}
+          </Text>
         </View>
 
         <Pressable
@@ -156,8 +179,8 @@ const styles = StyleSheet.create({
 
   dutyType: {
     fontSize: 13,
-    color: '#666',
     marginTop: 2,
+    fontWeight: '600',
   },
 
   accordionToggle: {
