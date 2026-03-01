@@ -25,8 +25,7 @@ export const getMealRecordsByDutyDate = async (
 };
 
 /* =========================================
-   既存：食事レコード保存
-   （Phase2安定版）
+   食事レコード保存（安全重複防止のみ）
 ========================================= */
 export const insertMealRecord = async (
   uuid: string,
@@ -35,8 +34,48 @@ export const insertMealRecord = async (
 ) => {
   const db = await getDb();
   const date = normalizeDutyDate(dutyDate);
-  const now = new Date().toISOString();
 
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+
+  /* =========================================
+     ① 直前1件取得（同一日の最新）
+  ========================================= */
+  const last = await db.getFirstAsync<{
+    id: number;
+    meal_label: string;
+    created_at: string;
+  }>(
+    `
+    SELECT *
+    FROM meal_records
+    WHERE uuid = ? AND duty_date = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+    `,
+    [uuid, date]
+  );
+
+  /* =========================================
+     ② 5秒以内の同一ラベルなら保存しない
+  ========================================= */
+  if (last) {
+    const lastTime = new Date(last.created_at).getTime();
+    const diffSeconds =
+      (nowDate.getTime() - lastTime) / 1000;
+
+    if (
+      last.meal_label === mealLabel &&
+      diffSeconds <= 5
+    ) {
+      console.log('⛔ 重複防止：5秒以内の同一ラベル');
+      return;
+    }
+  }
+
+  /* =========================================
+     ③ 通常保存
+  ========================================= */
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       `
@@ -54,7 +93,22 @@ export const insertMealRecord = async (
 };
 
 /* =========================================
-   🆕 Phase2.5：日次メモテーブル初期化
+   食事レコード削除（安全）
+========================================= */
+export const deleteMealRecord = async (id: number) => {
+  const db = await getDb();
+
+  await db.runAsync(
+    `
+    DELETE FROM meal_records
+    WHERE id = ?
+    `,
+    [id]
+  );
+};
+
+/* =========================================
+   Phase2.5：日次メモテーブル初期化
 ========================================= */
 export const ensureDailyMealMemoTable = async () => {
   const db = await getDb();
@@ -74,7 +128,7 @@ export const ensureDailyMealMemoTable = async () => {
 };
 
 /* =========================================
-   🆕 日次メモ取得
+   日次メモ取得
 ========================================= */
 export const getDailyMealMemo = async (
   uuid: string,
@@ -94,7 +148,7 @@ export const getDailyMealMemo = async (
 };
 
 /* =========================================
-   🆕 日次メモ保存（upsert）
+   日次メモ保存（upsert）
 ========================================= */
 export const upsertDailyMealMemo = async (
   uuid: string,

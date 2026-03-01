@@ -22,6 +22,15 @@ type Props = {
   onMealRefresh: () => void;
 };
 
+type TimingType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+const TIMING_OPTIONS: { key: TimingType; label: string }[] = [
+  { key: 'breakfast', label: '朝' },
+  { key: 'lunch', label: '昼' },
+  { key: 'dinner', label: '夜' },
+  { key: 'snack', label: '間食' },
+];
+
 const MEAL_LABELS: { key: MealLabel; label: string }[] = [
   { key: 'rice', label: 'ごはん・丼' },
   { key: 'noodle', label: '麺類' },
@@ -43,6 +52,9 @@ export default function MealInputButtons({
   dutyDate,
   onMealRefresh,
 }: Props) {
+
+  const [selectedTiming, setSelectedTiming] =
+    useState<TimingType>('breakfast');
 
   const [openMemo, setOpenMemo] = useState(false);
   const [memoMap, setMemoMap] = useState<Record<string, string>>({});
@@ -67,18 +79,21 @@ export default function MealInputButtons({
         setMemoMap({});
       }
 
-      setSaved(false); // 日付変更時は保存済み表示リセット
+      setSaved(false);
     };
 
     loadMemo();
   }, [uuid, dutyDate]);
 
   /* ============================
-     食事追加
+     食事追加（UI timingのみ保持）
   ============================ */
   const handleAddMeal = async (mealLabel: MealLabel) => {
     try {
       await insertMealRecord(uuid, dutyDate, mealLabel);
+
+      console.log('UI_TIMING_SELECTED:', selectedTiming);
+
       onMealRefresh();
     } catch (e) {
       Alert.alert('エラー', '食事の記録に失敗しました');
@@ -86,15 +101,13 @@ export default function MealInputButtons({
   };
 
   /* ============================
-     メモ保存（手動）
+     メモ保存
   ============================ */
   const handleSaveMemo = async () => {
     try {
       setSaving(true);
-
       await upsertDailyMealMemo(uuid, dutyDate, memoMap);
-
-      setSaved(true); // ← 保存成功
+      setSaved(true);
     } catch (e) {
       Alert.alert('エラー', 'メモの保存に失敗しました');
     } finally {
@@ -106,6 +119,31 @@ export default function MealInputButtons({
     <View style={styles.card}>
       <Text style={styles.title}>食事を記録</Text>
 
+      {/* ===== 時間帯選択 ===== */}
+      <View style={styles.timingRow}>
+        {TIMING_OPTIONS.map(item => (
+          <Pressable
+            key={item.key}
+            style={[
+              styles.timingButton,
+              selectedTiming === item.key && styles.timingActive,
+            ]}
+            onPress={() => setSelectedTiming(item.key)}
+          >
+            <Text
+              style={
+                selectedTiming === item.key
+                  ? styles.timingTextActive
+                  : styles.timingText
+              }
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ===== 食事ボタン ===== */}
       <View style={styles.grid}>
         {MEAL_LABELS.map(item => (
           <Pressable
@@ -118,6 +156,7 @@ export default function MealInputButtons({
         ))}
       </View>
 
+      {/* ===== メモ ===== */}
       <Pressable
         style={styles.memoToggle}
         onPress={() => setOpenMemo(v => !v)}
@@ -132,7 +171,6 @@ export default function MealInputButtons({
           {MEMO_ROWS.map(row => (
             <View key={row.key} style={styles.memoRow}>
               <Text style={styles.memoLabel}>{row.label}</Text>
-
               <TextInput
                 style={styles.memoInput}
                 value={memoMap[row.key] || ''}
@@ -151,10 +189,7 @@ export default function MealInputButtons({
           ))}
 
           <Pressable
-            style={[
-              styles.saveButton,
-              saving && { opacity: 0.6 },
-            ]}
+            style={[styles.saveButton, saving && { opacity: 0.6 }]}
             onPress={handleSaveMemo}
             disabled={saving}
           >
@@ -164,9 +199,7 @@ export default function MealInputButtons({
           </Pressable>
 
           {saved && (
-            <Text style={styles.savedText}>
-              ✔ 保存済み
-            </Text>
+            <Text style={styles.savedText}>✔ 保存済み</Text>
           )}
         </View>
       )}
@@ -188,6 +221,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  timingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  timingButton: {
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderRadius: 16,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  timingActive: {
+    backgroundColor: '#1976D2',
+    borderColor: '#1976D2',
+  },
+  timingText: {
+    fontSize: 13,
+    color: '#444',
+  },
+  timingTextActive: {
+    fontSize: 13,
+    color: '#fff',
+    fontWeight: '600',
   },
   grid: {
     flexDirection: 'row',

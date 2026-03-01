@@ -9,6 +9,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +18,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
 import { getTodayDuty } from './src/utils/getTodayDuty';
-
 import { ensureDailyMealMemoTable } from './src/database/mealRecords';
 
 import DutySearchBar from './src/components/DutySearchBar';
@@ -24,7 +25,7 @@ import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
 import RecordInputForm from './src/components/RecordInputForm';
 import MealInputButtons from './src/components/MealInputButtons';
-import DailyMealSummary from './src/components/DailyMealSummary'; // ← 追加
+import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
 
@@ -33,29 +34,21 @@ export default function App() {
   const [dutyDate, setDutyDate] = useState<string>('');
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [booting, setBooting] = useState<boolean>(true);
-
   const [jumpText, setJumpText] = useState<string | null>(null);
 
-  /* ============================
-     初期化
-  ============================ */
   useEffect(() => {
     const init = async () => {
       try {
-        // 🔹 新テーブル生成（安全）
         await ensureDailyMealMemoTable();
 
         let stored = await AsyncStorage.getItem('uuid');
-
         if (!stored) {
           stored = Crypto.randomUUID();
           await AsyncStorage.setItem('uuid', stored);
         }
-
         setUuid(stored);
 
         const today = new Date().toISOString().slice(0, 10);
-
         const duty =
           getTodayDuty({
             baseDate: today,
@@ -71,19 +64,11 @@ export default function App() {
     init();
   }, []);
 
-  /* ============================
-     全体リフレッシュ
-  ============================ */
   const refreshAll = () => setRefreshKey(v => v + 1);
 
-  /* ============================
-     ＋30 / −30 表示
-  ============================ */
   const showJump = (text: string) => {
     setJumpText(text);
-    setTimeout(() => {
-      setJumpText(null);
-    }, 800);
+    setTimeout(() => setJumpText(null), 800);
   };
 
   if (booting || !uuid || !dutyDate) {
@@ -94,76 +79,69 @@ export default function App() {
     );
   }
 
-  /* ============================
-     メインUI
-  ============================ */
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="always"
-        keyboardDismissMode="on-drag"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <DutySearchBar
+            dutyDate={dutyDate}
+            dutyType="乗務日"
+            jumpText={jumpText}
+            onChange={(newDate, jumpType) => {
+              setDutyDate(newDate);
+              refreshAll();
+              if (jumpType === 'long-next') showJump('＋30');
+              if (jumpType === 'long-prev') showJump('－30');
+            }}
+          />
 
-        <DutySearchBar
-          dutyDate={dutyDate}
-          dutyType="乗務日"
-          jumpText={jumpText}
-          onChange={(newDate, jumpType) => {
-            setDutyDate(newDate);
-            refreshAll();
+          <DailyMemo uuid={uuid} dutyDate={dutyDate} />
 
-            if (jumpType === 'long-next') showJump('＋30');
-            if (jumpType === 'long-prev') showJump('－30');
-          }}
-        />
+          <TodayTotal
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+            onRefresh={refreshAll}
+          />
 
-        <DailyMemo
-          uuid={uuid}
-          dutyDate={dutyDate}
-        />
+          <RecordInputForm
+            uuid={uuid}
+            dutyDate={dutyDate}
+            onSaved={refreshAll}
+          />
 
-        <TodayTotal
-          uuid={uuid}
-          dutyDate={dutyDate}
-          refreshKey={refreshKey}
-          onRefresh={refreshAll}
-        />
+          <MealInputButtons
+            uuid={uuid}
+            dutyDate={dutyDate}
+            onMealRefresh={refreshAll}
+          />
 
-        <RecordInputForm
-          uuid={uuid}
-          dutyDate={dutyDate}
-          onSaved={refreshAll}
-        />
+          <DailyMealSummary
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+          />
 
-        <MealInputButtons
-          uuid={uuid}
-          dutyDate={dutyDate}
-          onMealRefresh={refreshAll}
-        />
+          <TodayTimeline
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+          />
 
-        {/* =====================
-           今日の食事まとめ
-        ===================== */}
-        <DailyMealSummary
-          uuid={uuid}
-          dutyDate={dutyDate}
-          refreshKey={refreshKey}
-        />
-
-        <TodayTimeline
-          uuid={uuid}
-          dutyDate={dutyDate}
-          refreshKey={refreshKey}
-        />
-
-        <TodayRecordList
-          uuid={uuid}
-          dutyDate={dutyDate}
-          refreshKey={refreshKey}
-        />
-
-      </ScrollView>
+          <TodayRecordList
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -174,6 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   container: {
-    paddingBottom: 24,
+    flexGrow: 1,
+    paddingBottom: 120, // ← キーボード対策で少し余裕
   },
 });
