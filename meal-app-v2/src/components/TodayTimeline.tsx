@@ -16,29 +16,20 @@ type MealRecord = {
   id: number;
   meal_label: string;
   created_at: string;
-};
-
-/* ===== 時間帯判定 ===== */
-const detectTiming = (dateStr: string) => {
-  const hour = new Date(dateStr).getHours();
-
-  if (hour >= 5 && hour <= 8) return '朝';
-  if (hour >= 11 && hour <= 14) return '昼';
-  if (hour >= 17 && hour <= 21) return '夜';
-  return '間食';
+  timing?: string;
 };
 
 /* ===== 色分け ===== */
 const getTimingColor = (timing: string) => {
   switch (timing) {
     case '朝':
-      return '#FF9800'; // オレンジ
+      return '#FF9800';
     case '昼':
-      return '#1976D2'; // 青
+      return '#1976D2';
     case '夜':
-      return '#7B1FA2'; // 紫
+      return '#7B1FA2';
     default:
-      return '#388E3C'; // 緑（間食）
+      return '#388E3C';
   }
 };
 
@@ -96,7 +87,14 @@ export default function TodayTimeline({
           minute: '2-digit',
         });
 
-        const timingLabel = detectTiming(m.created_at);
+        const timingMap: Record<string, string> = {
+          breakfast: '朝',
+          lunch: '昼',
+          dinner: '夜',
+          snack: '間食',
+        };
+
+        const timingLabel = timingMap[m.timing || 'snack'];
         const timingColor = getTimingColor(timingLabel);
 
         return (
@@ -128,6 +126,10 @@ export default function TodayTimeline({
           </Pressable>
         );
       })}
+
+      <Text style={styles.hint}>
+        ※ 食事記録は長押しで削除できます
+      </Text>
     </View>
   );
 }
@@ -135,6 +137,11 @@ export default function TodayTimeline({
 const styles = StyleSheet.create({
   container: {
     marginTop: 8,
+  },
+  hint: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 6,
   },
   empty: {
     paddingVertical: 8,

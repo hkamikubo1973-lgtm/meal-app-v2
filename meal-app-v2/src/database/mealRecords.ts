@@ -30,6 +30,7 @@ export const getMealRecordsByDutyDate = async (
 export const insertMealRecord = async (
   uuid: string,
   dutyDate: string,
+  timing: string,
   mealLabel: MealLabel
 ) => {
   const db = await getDb();
@@ -42,10 +43,11 @@ export const insertMealRecord = async (
      ① 直前1件取得（同一日の最新）
   ========================================= */
   const last = await db.getFirstAsync<{
-    id: number;
-    meal_label: string;
-    created_at: string;
-  }>(
+  id: number;
+  meal_label: string;
+  created_at: string;
+  timing: string;
+ }>(
     `
     SELECT *
     FROM meal_records
@@ -65,8 +67,9 @@ export const insertMealRecord = async (
       (nowDate.getTime() - lastTime) / 1000;
 
     if (
-      last.meal_label === mealLabel &&
-      diffSeconds <= 5
+     last.meal_label === mealLabel &&
+     last.timing === timing &&
+     diffSeconds <= 5
     ) {
       console.log('⛔ 重複防止：5秒以内の同一ラベル');
       return;
@@ -83,11 +86,12 @@ export const insertMealRecord = async (
         uuid,
         duty_date,
         meal_label,
-        created_at
+        created_at,
+        timing
       )
-      VALUES (?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?)
       `,
-      [uuid, date, mealLabel, now]
+      [uuid, date, mealLabel, now, timing]
     );
   });
 };

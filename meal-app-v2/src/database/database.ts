@@ -48,7 +48,13 @@ export const getDb = async () => {
         created_at TEXT NOT NULL
       );
     `);
-
+     /* --- timingカラム追加（非破壊・既存環境対応） --- */
+     await db.execAsync(`
+      ALTER TABLE meal_records
+        ADD COLUMN timing TEXT DEFAULT 'snack';
+    `).catch(() => {
+    // 既に存在する場合は無視
+    });
     /* --- 🆕 乗務サイクルテーブル（追加のみ） --- */
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS duty_schedule (

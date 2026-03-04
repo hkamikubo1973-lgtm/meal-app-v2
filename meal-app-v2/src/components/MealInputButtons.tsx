@@ -89,16 +89,21 @@ export default function MealInputButtons({
      食事追加（UI timingのみ保持）
   ============================ */
   const handleAddMeal = async (mealLabel: MealLabel) => {
-    try {
-      await insertMealRecord(uuid, dutyDate, mealLabel);
+  try {
+    await insertMealRecord(
+      uuid,
+      dutyDate,
+      selectedTiming,   // ← 追加
+      mealLabel
+    );
 
-      console.log('UI_TIMING_SELECTED:', selectedTiming);
+    console.log('UI_TIMING_SELECTED:', selectedTiming);
 
-      onMealRefresh();
-    } catch (e) {
-      Alert.alert('エラー', '食事の記録に失敗しました');
-    }
-  };
+    onMealRefresh();
+  } catch (e) {
+    Alert.alert('エラー', '食事の記録に失敗しました');
+  }
+};
 
   /* ============================
      メモ保存
@@ -108,6 +113,7 @@ export default function MealInputButtons({
       setSaving(true);
       await upsertDailyMealMemo(uuid, dutyDate, memoMap);
       setSaved(true);
+      onMealRefresh();
     } catch (e) {
       Alert.alert('エラー', 'メモの保存に失敗しました');
     } finally {
