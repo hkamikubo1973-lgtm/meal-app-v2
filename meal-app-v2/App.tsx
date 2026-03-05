@@ -1,6 +1,6 @@
 /**
  * ============================================
- * ⚠ Phase2 安定固定領域（Technical Master Ver.T1）
+ * ⚠ Phase2 安定固定領域（Technical Master Ver.T2）
  * ============================================
  */
 
@@ -20,6 +20,9 @@ import * as Crypto from 'expo-crypto';
 import { getTodayDuty } from './src/utils/getTodayDuty';
 import { ensureDailyMealMemoTable } from './src/database/mealRecords';
 
+import { getDutyType } from './src/utils/getDutyType';
+import { DutyType } from './src/types/DutyType';
+import { getCycleSettings, saveCycleSettings } from './src/database/cycleSettings';
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
@@ -29,13 +32,58 @@ import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
 
+const DUTY_LABEL: Record<DutyType, string> = {
+  work: '乗務日',
+  off: '公休',
+  public: '公出',
+  paid: '有休',
+};
+
 export default function App() {
   const [uuid, setUuid] = useState<string>('');
   const [dutyDate, setDutyDate] = useState<string>('');
+  const [dutyType, setDutyType] = useState<DutyType | null>(null);
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [booting, setBooting] = useState<boolean>(true);
   const [jumpText, setJumpText] = useState<string | null>(null);
+  const [baseDate, setBaseDate] = useState<string | null>(null);
 
+  const resetBaseDateToToday = async () => {
+  console.log("押された");
+
+  if (!uuid) {
+    console.log("uuidなし");
+    return;
+  }
+
+  const settings = await getCycleSettings(uuid);
+  console.log("settings:", settings);
+
+  if (!settings) {
+    console.log("settingsなし");
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  console.log("today:", today);
+
+  await saveCycleSettings(
+    uuid,
+    today,
+    JSON.parse(settings.pattern_json),
+    settings.mode
+  );
+
+  console.log("保存完了");
+
+  setBaseDate(today);
+  setDutyDate(today);
+  refreshAll();
+};
+
+  /* ===============================
+     初期化
+  =============================== */
   useEffect(() => {
     const init = async () => {
       try {
@@ -56,6 +104,7 @@ export default function App() {
           }) ?? today;
 
         setDutyDate(duty);
+
       } finally {
         setBooting(false);
       }
@@ -63,6 +112,36 @@ export default function App() {
 
     init();
   }, []);
+
+  /* ==========================
+     基準日読み込み
+  ========================== */
+  useEffect(() => {
+    const loadBaseDate = async () => {
+      if (!uuid) return;
+
+      const settings = await getCycleSettings(uuid);
+      if (settings) {
+        setBaseDate(settings.base_date);
+      }
+    };
+
+    loadBaseDate();
+  }, [uuid]);
+
+  /* ===============================
+     dutyType取得（安全表示専用）
+  =============================== */
+  useEffect(() => {
+    const loadDutyType = async () => {
+      if (!uuid || !dutyDate) return;
+
+      const type = await getDutyType(uuid, dutyDate);
+      setDutyType(type);
+    };
+
+    loadDutyType();
+  }, [uuid, dutyDate]);
 
   const refreshAll = () => setRefreshKey(v => v + 1);
 
@@ -92,7 +171,9 @@ export default function App() {
         >
           <DutySearchBar
             dutyDate={dutyDate}
-            dutyType="乗務日"
+            dutyType={
+              dutyType ? DUTY_LABEL[dutyType] : '...'
+            }
             jumpText={jumpText}
             onChange={(newDate, jumpType) => {
               setDutyDate(newDate);
@@ -100,8 +181,14 @@ export default function App() {
               if (jumpType === 'long-next') showJump('＋30');
               if (jumpType === 'long-prev') showJump('－30');
             }}
-          />
+        />
+<Text style={{ fontSize: 16, fontWeight: 'bold', marginTop: 20 }}>
+  ■ 乗務サイクル設定（表示テスト）
+</Text>
 
+<Text style={{ marginTop: 8 }}>
+  基準日: {baseDate ?? '未設定'}
+</Text>
           <DailyMemo uuid={uuid} dutyDate={dutyDate} />
 
           <TodayTotal
@@ -140,6 +227,16 @@ export default function App() {
             dutyDate={dutyDate}
             refreshKey={refreshKey}
           />
+          <Text
+            style={{
+                  textAlign: 'center',
+                      color: 'blue',
+    marginVertical: 20,
+  }}
+  onPress={resetBaseDateToToday}
+>
+  基準日を今日にリセット（テスト）
+</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -153,6 +250,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    paddingBottom: 120, // ← キーボード対策で少し余裕
+    paddingBottom: 120,
   },
 });

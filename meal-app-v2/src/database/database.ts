@@ -48,6 +48,14 @@ export const getDb = async () => {
         created_at TEXT NOT NULL
       );
     `);
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS cycle_settings (
+        uuid TEXT PRIMARY KEY,
+        base_date TEXT NOT NULL,
+        pattern_json TEXT NOT NULL,
+        mode TEXT NOT NULL
+      );
+    `);
      /* --- timingカラム追加（非破壊・既存環境対応） --- */
      await db.execAsync(`
       ALTER TABLE meal_records
