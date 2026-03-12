@@ -17,12 +17,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
-import { getTodayDuty } from './src/utils/getTodayDuty';
 import { ensureDailyMealMemoTable } from './src/database/mealRecords';
-
 import { getDutyType } from './src/utils/getDutyType';
 import { DutyType } from './src/types/DutyType';
-import { getCycleSettings, saveCycleSettings } from './src/database/cycleSettings';
+import { getCycleSettings } from './src/database/cycleSettings';
+import { saveCycleSettings } from './src/database/cycleSettings';
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
@@ -31,6 +30,7 @@ import MealInputButtons from './src/components/MealInputButtons';
 import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
+
 
 const DUTY_LABEL: Record<DutyType, string> = {
   work: '乗務日',
@@ -47,39 +47,7 @@ export default function App() {
   const [booting, setBooting] = useState<boolean>(true);
   const [jumpText, setJumpText] = useState<string | null>(null);
   const [baseDate, setBaseDate] = useState<string | null>(null);
-
-  const resetBaseDateToToday = async () => {
-  console.log("押された");
-
-  if (!uuid) {
-    console.log("uuidなし");
-    return;
-  }
-
-  const settings = await getCycleSettings(uuid);
-  console.log("settings:", settings);
-
-  if (!settings) {
-    console.log("settingsなし");
-    return;
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  console.log("today:", today);
-
-  await saveCycleSettings(
-    uuid,
-    today,
-    JSON.parse(settings.pattern_json),
-    settings.mode
-  );
-
-  console.log("保存完了");
-
-  setBaseDate(today);
-  setDutyDate(today);
-  refreshAll();
-};
+  const [pattern, setPattern] = useState<DutyType[] | null>(null);
 
   /* ===============================
      初期化
@@ -97,13 +65,7 @@ export default function App() {
         setUuid(stored);
 
         const today = new Date().toISOString().slice(0, 10);
-        const duty =
-          getTodayDuty({
-            baseDate: today,
-            standardCycle: ['DUTY', 'OFF'],
-          }) ?? today;
-
-        setDutyDate(duty);
+        setDutyDate(today);
 
       } finally {
         setBooting(false);
@@ -123,6 +85,7 @@ export default function App() {
       const settings = await getCycleSettings(uuid);
       if (settings) {
         setBaseDate(settings.base_date);
+        setPattern(JSON.parse(settings.pattern_json));
       }
     };
 
@@ -170,25 +133,30 @@ export default function App() {
           keyboardDismissMode="on-drag"
         >
           <DutySearchBar
+            uuid={uuid}
             dutyDate={dutyDate}
-            dutyType={
-              dutyType ? DUTY_LABEL[dutyType] : '...'
-            }
+            dutyType={dutyType ? DUTY_LABEL[dutyType] : '...'}
             jumpText={jumpText}
+            baseDate={baseDate}
+            pattern={pattern}
             onChange={(newDate, jumpType) => {
               setDutyDate(newDate);
               refreshAll();
               if (jumpType === 'long-next') showJump('＋30');
               if (jumpType === 'long-prev') showJump('－30');
-            }}
-        />
-<Text style={{ fontSize: 16, fontWeight: 'bold', marginTop: 20 }}>
-  ■ 乗務サイクル設定（表示テスト）
-</Text>
-
-<Text style={{ marginTop: 8 }}>
-  基準日: {baseDate ?? '未設定'}
-</Text>
+             }}
+             onSavePattern={async (newBaseDate, newPattern) => {
+  await saveCycleSettings(
+    uuid,
+    newBaseDate,
+    newPattern,
+    'cycle'
+  );
+  setPattern(newPattern);
+  setBaseDate(newBaseDate);
+}}
+           />
+                   
           <DailyMemo uuid={uuid} dutyDate={dutyDate} />
 
           <TodayTotal
@@ -227,16 +195,7 @@ export default function App() {
             dutyDate={dutyDate}
             refreshKey={refreshKey}
           />
-          <Text
-            style={{
-                  textAlign: 'center',
-                      color: 'blue',
-    marginVertical: 20,
-  }}
-  onPress={resetBaseDateToToday}
->
-  基準日を今日にリセット（テスト）
-</Text>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
