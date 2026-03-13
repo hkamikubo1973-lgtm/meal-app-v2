@@ -88,6 +88,14 @@ export default function DutySearchBar({
     };
   }, [baseDate, dutyDate, pattern]);
 
+  const progressArray = React.useMemo(() => {
+    if (!cycleInfo) return [];
+
+    return Array.from({ length: cycleInfo.total }).map(
+    (_, index) => index < cycleInfo.day
+    );
+  }, [cycleInfo]);
+
   const changeDateBy = (days: number, jumpType?: string) => {
     const [y, m, d] = dutyDate.split('-').map(Number);
     const date = new Date(y, m - 1, d);
@@ -191,6 +199,20 @@ export default function DutySearchBar({
            サイクル {cycleInfo.day} / {cycleInfo.total} 日目
          （{DUTY_LABEL[cycleInfo.label]}）
          </Text>
+      )}
+      
+      {cycleInfo && (
+        <View style={styles.progressRow}>
+           {progressArray.map((active, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressBlock,
+                active && styles.progressBlockActive,
+              ]}
+            />
+          ))}
+        </View>
       )}
 
           {localPattern && (
@@ -335,5 +357,21 @@ const styles = StyleSheet.create({
   fontSize: 13,
   color: '#555',
   fontWeight: '600',
+  },
+  progressRow: {
+  flexDirection: 'row',
+  marginTop: 6,
+  },
+
+progressBlock: {
+  width: 18,
+  height: 6,
+  marginRight: 4,
+  borderRadius: 3,
+  backgroundColor: '#E0E0E0',
+},
+
+progressBlockActive: {
+  backgroundColor: '#1976D2',
 },
 });
