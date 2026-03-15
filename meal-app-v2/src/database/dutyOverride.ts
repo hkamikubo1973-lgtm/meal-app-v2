@@ -14,14 +14,15 @@ export const setDutyOverride = async (
 
   await db.runAsync(
     `
-    INSERT INTO duty_override
-    (uuid,duty_date,duty_type)
-    VALUES (?,?,?)
+    INSERT INTO duty_overrides
+    (uuid, duty_date, duty_type)
+    VALUES (?, ?, ?)
     `,
-    [uuid,dutyDate,dutyType]
+    [uuid, dutyDate, dutyType]
   );
 
 };
+
 
 /**
  * 勤務例外取得
@@ -38,18 +39,19 @@ export const getDutyOverride = async (
   }>(
     `
     SELECT duty_type
-    FROM duty_override
+    FROM duty_overrides
     WHERE uuid = ?
     AND duty_date = ?
     ORDER BY id DESC
     LIMIT 1
     `,
-    [uuid,dutyDate]
+    [uuid, dutyDate]
   );
 
   return result?.duty_type ?? null;
 
 };
+
 
 /**
  * 勤務例外削除
@@ -63,11 +65,11 @@ export const clearDutyOverride = async (
 
   await db.runAsync(
     `
-    DELETE FROM duty_override
+    DELETE FROM duty_overrides
     WHERE uuid = ?
     AND duty_date = ?
     `,
-    [uuid,dutyDate]
+    [uuid, dutyDate]
   );
 
 };

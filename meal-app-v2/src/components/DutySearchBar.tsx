@@ -25,6 +25,7 @@ type Props = {
     pattern: DutyType[]
   ) => Promise<void>;
   onSetOverride: (type: DutyType) => Promise<void>;
+  onResetOverride: () => Promise<void>;
 };
 
 export default function DutySearchBar({
@@ -36,6 +37,7 @@ export default function DutySearchBar({
   onChange,
   onSavePattern,
   onSetOverride,
+  onResetOverride
 }: Props) {
 
   const [openCycle, setOpenCycle] = useState(false);
@@ -57,9 +59,10 @@ export default function DutySearchBar({
     ake: '明け',
     off: '公休',
     paid: '有休',
-    absent: '欠勤',
+    absence: '欠勤',
     late: '遅刻',
-    early_leave: '早退',
+    leaveEarly: '早退',
+    cancel: '取消',
   };
 
   const nextDuty = (type: DutyType): DutyType => {
@@ -198,24 +201,31 @@ onLongPress={() => changeDateBy(30,'long-next')}
 </Text>
 
 <View style={styles.overrideRow}>
+  {(['work','paid','absence','late','leaveEarly'] as DutyType[])
+  .map((type) => (
 
-{(['work','paid','absent','late','early_leave'] as DutyType[])
-.map((type) => (
+    <Pressable
+      key={type}
+      style={styles.overrideButton}
+      onPress={() => onSetOverride(type)}
+    >
+      <Text style={styles.overrideText}>
+        {DUTY_LABEL[type]}
+      </Text>
+    </Pressable>
 
-<Pressable
-key={type}
-style={styles.overrideButton}
-onPress={() => onSetOverride(type)}
->
+  ))}
+</View>
 
-<Text style={styles.overrideText}>
-{DUTY_LABEL[type]}
-</Text>
-
-</Pressable>
-
-))}
-
+<View style={styles.cancelRow}>
+  <Pressable
+    style={styles.cancelButton}
+    onPress={onResetOverride}
+  >
+    <Text style={styles.cancelText}>
+      修正解除
+    </Text>
+  </Pressable>
 </View>
 
 </View>
@@ -506,16 +516,27 @@ justifyContent:'space-between',
 marginTop:10
 },
 
-cancelButton:{
-paddingVertical:8,
-paddingHorizontal:14
-},
-
 saveButton:{
 paddingVertical:8,
 paddingHorizontal:14,
 backgroundColor:'#1976D2',
 borderRadius:6
-}
+},
 
+cancelRow: {
+  marginTop: 8,
+  alignItems: 'center'
+},
+
+cancelButton: {
+  backgroundColor: '#FFEBEE',
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  borderRadius: 6
+},
+
+cancelText: {
+  color: '#C62828',
+  fontWeight: '600'
+},
 });

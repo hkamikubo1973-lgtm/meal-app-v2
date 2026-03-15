@@ -23,7 +23,7 @@ import { DutyType } from './src/types/DutyType';
 import { getCycleSettings } from './src/database/cycleSettings';
 import { saveCycleSettings } from './src/database/cycleSettings';
 import { setDutyOverride } from './src/database/dutyOverride';   // ←追加
-
+import { clearDutyOverride } from './src/database/dutyOverride';
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
@@ -39,9 +39,10 @@ const DUTY_LABEL: Record<DutyType, string> = {
   ake: '明け',
   off: '公休',
   paid: '有休',
-  absent: '欠勤',
+  absence: '欠勤',
   late: '遅刻',
-  early_leave: '早退',
+  leaveEarly: '早退',
+  cancel: '取消',
 };
 
 export default function App() {
@@ -171,6 +172,21 @@ export default function App() {
 
 };
 
+/* ===============================
+   勤務修正リセット
+=============================== */
+
+const handleResetOverride = async () => {
+
+  await clearDutyOverride(uuid, dutyDate);
+
+  const newType = await getDutyType(uuid, dutyDate);
+
+  setDutyType(newType);
+
+  refreshAll();
+
+};
 
   if (booting || !uuid || !dutyDate) {
 
@@ -236,8 +252,8 @@ export default function App() {
 
             }}
 
-            onSetOverride={handleOverride}   // ←追加
-
+            onSetOverride={handleOverride}
+            onResetOverride={handleResetOverride}
           />
 
 

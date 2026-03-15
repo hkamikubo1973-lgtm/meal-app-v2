@@ -28,9 +28,10 @@ export default function DutySearch({
     ake: '明け',
     off: '公休',
     paid: '有休',
-    absent: '欠勤',
+    absence: '欠勤',
     late: '遅刻',
-    early_leave: '早退',
+    leaveEarly: '早退',
+    cancel: '取消',
   };
 
   const handleOverride = async (type: DutyType) => {
@@ -90,7 +91,7 @@ export default function DutySearch({
 
         <View style={styles.overrideRow}>
 
-          {(['paid','absent','late','early_leave'] as DutyType[]).map(type => (
+          {(['paid','absence','late','early_leave','cancel'] as DutyType[]).map(type => (
 
             <Pressable
               key={type}
@@ -158,8 +159,10 @@ const styles = StyleSheet.create({
   },
 
   overrideRow: {
-    flexDirection: 'row',
-    gap: 8,
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+  justifyContent: 'center',
   },
 
   overrideButton: {

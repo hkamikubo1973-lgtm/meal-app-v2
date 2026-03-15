@@ -6,4 +6,5 @@ export type DutyType =
   | 'paid'
   | 'absence'
   | 'late'
-  | 'leaveEarly';
+  | 'leaveEarly'
+  | 'cancel';

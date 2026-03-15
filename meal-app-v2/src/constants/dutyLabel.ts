@@ -8,5 +8,6 @@ export const DUTY_LABEL: Record<DutyType, string> = {
   paid: '有休',
   absence: '欠勤',
   late: '遅刻',
-  leaveEarly: '早退'
+  leaveEarly: '早退',
+  cancel: '取消',
 };
