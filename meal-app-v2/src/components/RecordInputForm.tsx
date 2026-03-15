@@ -1,4 +1,5 @@
 // src/components/RecordInputForm.tsx
+
 import React, { useState } from 'react';
 import {
   View,
@@ -7,10 +8,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Keyboard,
+  Alert,
 } from 'react-native';
 
-import { insertDailyRecord } from '../database/database';
-import { BusinessType } from '../database/database';
+import {
+  insertDailyRecord,
+  BusinessType,
+} from '../database/database';
 
 type Props = {
   uuid: string;
@@ -32,55 +36,93 @@ export default function RecordInputForm({
   dutyDate,
   onSaved,
 }: Props) {
+
   const [amountText, setAmountText] = useState('');
-  const amount = Number(amountText);
   const [businessType, setBusinessType] =
     useState<BusinessType>('normal');
   const [saving, setSaving] = useState(false);
 
-  const canSave = !saving && amount > 0;
+  const amount = Number(amountText);
+
+  const canSave =
+    !saving &&
+    amountText.length > 0 &&
+    amount > 0;
 
   const handleSave = async () => {
+
     if (!canSave) return;
 
     try {
+
       setSaving(true);
-      await insertDailyRecord(uuid, dutyDate, amount, businessType);
+
+      await insertDailyRecord(
+        uuid,
+        dutyDate,
+        amount,
+        businessType
+      );
+
       setAmountText('');
       setBusinessType('normal');
+
       Keyboard.dismiss();
+
       onSaved();
+
+    } catch (err) {
+
+      console.log('売上保存エラー', err);
+
+      Alert.alert(
+        'エラー',
+        '売上保存に失敗しました'
+      );
+
     } finally {
+
       setSaving(false);
+
     }
   };
 
   return (
+
     <View style={styles.card}>
-      {/* 見出し強化 */}
-      <Text style={styles.label}>売上金額（円）</Text>
+
+      <Text style={styles.label}>
+        売上金額（円）
+      </Text>
 
       <TextInput
         style={styles.input}
         keyboardType="numeric"
         value={amountText}
         onChangeText={(text) =>
-          setAmountText(text.replace(/[^0-9]/g, ''))
+          setAmountText(
+            text.replace(/[^0-9]/g, '')
+          )
         }
         placeholder="例：30000"
       />
 
-      {/* 種別ボタン均等化 */}
       <View style={styles.typeRow}>
+
         {BUSINESS_TYPES.map(t => (
+
           <TouchableOpacity
             key={t.key}
             style={[
               styles.typeButton,
-              businessType === t.key && styles.typeActive,
+              businessType === t.key &&
+                styles.typeActive,
             ]}
-            onPress={() => setBusinessType(t.key)}
+            onPress={() =>
+              setBusinessType(t.key)
+            }
           >
+
             <Text
               style={
                 businessType === t.key
@@ -90,27 +132,37 @@ export default function RecordInputForm({
             >
               {t.label}
             </Text>
+
           </TouchableOpacity>
+
         ))}
+
       </View>
 
       <TouchableOpacity
         style={[
           styles.saveButton,
-          canSave ? styles.saveActive : styles.saveDisabled,
+          canSave
+            ? styles.saveActive
+            : styles.saveDisabled,
         ]}
         disabled={!canSave}
         onPress={handleSave}
       >
+
         <Text style={styles.saveText}>
           {saving ? '保存中…' : '保存'}
         </Text>
+
       </TouchableOpacity>
+
     </View>
+
   );
 }
 
 const styles = StyleSheet.create({
+
   card: {
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
@@ -121,11 +173,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
 
-  /* ===== 見出し統一 ===== */
   label: {
-    fontSize: 16,       // ← 大きく
-    fontWeight: '600',  // ← 濃く
-    color: '#000',      // ← 黒
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 6,
   },
 
@@ -139,7 +189,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  /* ===== 種別均等配置 ===== */
   typeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -147,7 +196,7 @@ const styles = StyleSheet.create({
   },
 
   typeButton: {
-    flex: 1,               // ← 均等3分割
+    flex: 1,
     marginHorizontal: 4,
     paddingVertical: 10,
     borderWidth: 1,
@@ -191,4 +240,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+
 });

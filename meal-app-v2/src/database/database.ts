@@ -1,191 +1,146 @@
 /**
  * ============================================
- * ⚠ Phase2 安定固定領域（Technical Master Ver.T2）
- * --------------------------------------------
- * 変更禁止：
- * - duty_date ロジック
- * - daily_records 構造
- * - meal_records 構造
- *
- * 追加のみ許可。
+ * ⚠ Phase2 安定固定領域（Technical Master Ver.T7.1）
+ * UI完全整合版
  * ============================================
  */
 
 import * as SQLite from 'expo-sqlite';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/* =========
-   DB本体（Async版）
-========= */
+export type BusinessType = 'normal' | 'charter' | 'other';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
+/* =========================
+   DB取得
+========================= */
+
 export const getDb = async () => {
+
   if (!db) {
+
     db = await SQLite.openDatabaseAsync('app.db');
 
-    /* --- 売上テーブル --- */
     await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS daily_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT NOT NULL,
-        duty_date TEXT NOT NULL,
-        sales INTEGER NOT NULL,
-        business_type TEXT NOT NULL,
-        weather TEXT,
-        created_at TEXT NOT NULL
-      );
-    `);
 
-    /* --- 食事テーブル --- */
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS meal_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT NOT NULL,
-        duty_date TEXT NOT NULL,
-        meal_label TEXT NOT NULL,
-        memo TEXT,
-        created_at TEXT NOT NULL
-      );
-    `);
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS cycle_settings (
-        uuid TEXT PRIMARY KEY,
-        base_date TEXT NOT NULL,
-        pattern_json TEXT NOT NULL,
-        mode TEXT NOT NULL
-      );
-    `);
-     /* --- timingカラム追加（非破壊・既存環境対応） --- */
-     await db.execAsync(`
-      ALTER TABLE meal_records
-        ADD COLUMN timing TEXT DEFAULT 'snack';
-    `).catch(() => {
-    // 既に存在する場合は無視
-    });
-    /* --- 🆕 乗務サイクルテーブル（追加のみ） --- */
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS duty_schedule (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT NOT NULL,
-        duty_date TEXT NOT NULL,
-        duty_type TEXT NOT NULL,   -- 'work' | 'after' | 'off'
-        created_at TEXT NOT NULL
-      );
-    `);
+    /* 売上 */
 
-    console.log('DB INIT OK (ASYNC)');
+    CREATE TABLE IF NOT EXISTS daily_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL,
+      duty_date TEXT NOT NULL,
+      sales INTEGER NOT NULL,
+      business_type TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_daily_uuid_date
+    ON daily_records(uuid, duty_date);
+
+    /* 食事 */
+
+    CREATE TABLE IF NOT EXISTS meal_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL,
+      duty_date TEXT NOT NULL,
+      meal_type TEXT NOT NULL,
+      meal_text TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_meal_uuid_date
+    ON meal_records(uuid, duty_date);
+
+    /* 天気 */
+
+    CREATE TABLE IF NOT EXISTS weather_records (
+      uuid TEXT NOT NULL,
+      duty_date TEXT NOT NULL,
+      weather TEXT NOT NULL,
+      PRIMARY KEY (uuid, duty_date)
+    );
+
+    /* サイクル */
+
+    CREATE TABLE IF NOT EXISTS cycle_settings (
+      uuid TEXT PRIMARY KEY,
+      base_date TEXT NOT NULL,
+      pattern_json TEXT NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    /* 勤務例外 */
+
+    CREATE TABLE IF NOT EXISTS duty_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL,
+      duty_date TEXT NOT NULL,
+      duty_type TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_override_unique
+    ON duty_overrides(uuid, duty_date);
+
+    `);
   }
 
   return db;
 };
 
-/* =========
-   型定義
-========= */
 
-export type BusinessType = 'normal' | 'charter' | 'other';
-export type WeatherType = '晴' | '曇' | '雨' | '雪' | '荒天';
-
-export type DutyType = 'work' | 'after' | 'off'; // 🆕
-
-export type DailyRecord = {
-  id: number;
-  uuid: string;
-  duty_date: string;
-  sales: number;
-  business_type: BusinessType;
-  weather: WeatherType | null;
-  created_at: string;
-};
-
-export type MealLabel =
-  | 'rice'
-  | 'noodle'
-  | 'light'
-  | 'healthy'
-  | 'supplement'
-  | 'skip';
-
-export type MealRecord = {
-  id: number;
-  uuid: string;
-  duty_date: string;
-  meal_label: MealLabel;
-  memo: string | null;
-  created_at: string;
-};
-
-/* =========
-   duty_date 正規化
-========= */
-
-const normalizeDutyDate = (dutyDate: string) =>
-  dutyDate.slice(0, 10);
-
-/* =========
-   売上 INSERT
-========= */
+/* =========================
+   売上保存
+========================= */
 
 export const insertDailyRecord = async (
   uuid: string,
   dutyDate: string,
   sales: number,
-  businessType: BusinessType = 'normal'
+  businessType: string
 ) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
 
-  await db.runAsync(
+  const database = await getDb();
+
+  await database.runAsync(
     `
     INSERT INTO daily_records
-      (uuid, duty_date, sales, business_type, weather, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    (uuid, duty_date, sales, business_type, created_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
     `,
-    [
-      uuid,
-      dateOnly,
-      sales,
-      businessType,
-      null,
-      new Date().toISOString(),
-    ]
+    [uuid, dutyDate, sales, businessType]
   );
+
 };
 
-/* =========
-   本日合計
-========= */
+/* =========================
+   今日売上
+========================= */
 
 export const getTodayTotalSales = async (
   uuid: string,
   dutyDate: string
 ): Promise<number> => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
 
-  const rows = await db.getAllAsync<{ total: number }>(
+  const database = await getDb();
+
+  const row = await database.getFirstAsync<{ total: number }>(
     `
-    SELECT COALESCE(SUM(sales), 0) AS total
+    SELECT SUM(sales) as total
     FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
+    WHERE uuid = ?
+    AND duty_date = ?
     `,
-    [uuid, dateOnly]
+    [uuid, dutyDate]
   );
 
-  return rows[0]?.total ?? 0;
+  return row?.total ?? 0;
 };
 
-/* =========
-   今月合計（締日対応）
-========= */
 
-const formatDate = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
+/* =========================
+   月売上
+========================= */
 
 export const getMonthlyTotalSales = async (
   uuid: string,
@@ -193,73 +148,80 @@ export const getMonthlyTotalSales = async (
   closingDay: number
 ): Promise<number> => {
 
-  const db = await getDb();
+  const database = await getDb();
 
-  const current = new Date(dutyDate);
-  const year = current.getFullYear();
-  const month = current.getMonth();
-  const day = current.getDate();
+  const base = new Date(dutyDate);
+  const year = base.getFullYear();
+  const month = base.getMonth();
 
-  let start: Date;
-  let end: Date;
+  const start =
+    closingDay === 31
+      ? new Date(year, month, 1)
+      : new Date(year, month, closingDay + 1);
 
-  if (day > closingDay) {
-    start = new Date(year, month, closingDay + 1);
-    end = new Date(year, month + 1, closingDay);
-  } else {
-    start = new Date(year, month - 1, closingDay + 1);
-    end = new Date(year, month, closingDay);
-  }
+  const end =
+    closingDay === 31
+      ? new Date(year, month + 1, 0)
+      : new Date(year, month + 1, closingDay);
 
-  // 🔒 安全フォーマット使用（ISO禁止）
-  const startStr = formatDate(start);
-  const endStr = formatDate(end);
+  const startStr = start.toISOString().slice(0, 10);
+  const endStr = end.toISOString().slice(0, 10);
 
-  const rows = await db.getAllAsync<{ total: number }>(
+  const row = await database.getFirstAsync<{ total: number }>(
     `
-    SELECT COALESCE(SUM(sales), 0) AS total
+    SELECT SUM(sales) as total
     FROM daily_records
     WHERE uuid = ?
-      AND duty_date BETWEEN ? AND ?
+    AND duty_date BETWEEN ? AND ?
     `,
     [uuid, startStr, endStr]
   );
 
-  return rows[0]?.total ?? 0;
+  return row?.total ?? 0;
 };
 
-/* =========
-   売上リセット
-========= */
 
-export const resetDailySalesByDutyDate = async (
+/* =========================
+   今日売上一覧
+========================= */
+
+export const getDailyRecords = async (
   uuid: string,
   dutyDate: string
 ) => {
-  const db = await getDb();
-  const dateOnly = normalizeDutyDate(dutyDate);
 
-  await db.runAsync(
+  const database = await getDb();
+
+  return database.getAllAsync(
     `
-    DELETE FROM daily_records
-    WHERE uuid = ? AND duty_date = ?
+    SELECT *
+    FROM daily_records
+    WHERE uuid = ?
+    AND duty_date = ?
+    ORDER BY id DESC
     `,
-    [uuid, dateOnly]
+    [uuid, dutyDate]
   );
 };
+
+
+/* =========================
+   売上内訳
+========================= */
 
 export const getDailySalesSummaryByDutyDate = async (
   uuid: string,
   dutyDate: string
 ) => {
-  const db = await getDb();
 
-  const rows: any[] = await db.getAllAsync(
+  const database = await getDb();
+
+  const rows = await database.getAllAsync(
     `
     SELECT business_type, SUM(sales) as total
     FROM daily_records
     WHERE uuid = ?
-      AND duty_date = ?
+    AND duty_date = ?
     GROUP BY business_type
     `,
     [uuid, dutyDate]
@@ -271,27 +233,80 @@ export const getDailySalesSummaryByDutyDate = async (
     other: 0,
   };
 
-  rows.forEach(r => {
-    if (r.business_type in result) {
-      result[r.business_type as keyof typeof result] = r.total ?? 0;
-    }
+  rows.forEach((r: any) => {
+
+    if (r.business_type === 'charter') result.charter = r.total;
+    else if (r.business_type === 'other') result.other = r.total;
+    else result.normal = r.total;
+
   });
 
   return result;
 };
+
+
+/* =========================
+   売上リセット
+========================= */
+
+export const resetDailySalesByDutyDate = async (
+  uuid: string,
+  dutyDate: string
+) => {
+
+  const database = await getDb();
+
+  await database.runAsync(
+    `
+    DELETE FROM daily_records
+    WHERE uuid = ?
+    AND duty_date = ?
+    `,
+    [uuid, dutyDate]
+  );
+};
+
+
+/* =========================
+   天気保存
+========================= */
+
+export const updateWeatherByDutyDate = async (
+  uuid: string,
+  dutyDate: string,
+  weather: string
+) => {
+
+  const database = await getDb();
+
+  await database.runAsync(
+    `
+    INSERT OR REPLACE INTO weather_records
+    (uuid, duty_date, weather)
+    VALUES (?, ?, ?)
+    `,
+    [uuid, dutyDate, weather]
+  );
+};
+
+
+/* =========================
+   天気取得
+========================= */
+
 export const getTodayWeather = async (
   uuid: string,
   dutyDate: string
 ) => {
-  const db = await getDb();
 
-  const row: any = await db.getFirstAsync(
+  const database = await getDb();
+
+  const row = await database.getFirstAsync<{ weather: string }>(
     `
     SELECT weather
-    FROM daily_records
+    FROM weather_records
     WHERE uuid = ?
-      AND duty_date = ?
-    LIMIT 1
+    AND duty_date = ?
     `,
     [uuid, dutyDate]
   );
@@ -299,20 +314,90 @@ export const getTodayWeather = async (
   return row?.weather ?? null;
 };
 
-export const updateWeatherByDutyDate = async (
+
+/* =========================
+   サイクル取得
+========================= */
+
+export const getCycleSettings = async (uuid: string) => {
+
+  const database = await getDb();
+
+  return database.getFirstAsync(
+    `
+    SELECT *
+    FROM cycle_settings
+    WHERE uuid = ?
+    `,
+    [uuid]
+  );
+};
+
+
+/* =========================
+   サイクル保存
+========================= */
+
+export const saveCycleSettings = async (
+  uuid: string,
+  baseDate: string,
+  pattern: string[]
+) => {
+
+  const database = await getDb();
+
+  await database.runAsync(
+    `
+    INSERT OR REPLACE INTO cycle_settings
+    (uuid, base_date, pattern_json, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `,
+    [uuid, baseDate, JSON.stringify(pattern)]
+  );
+};
+
+
+/* =========================
+   勤務例外保存
+========================= */
+
+export const setDutyOverride = async (
   uuid: string,
   dutyDate: string,
-  weather: string
+  dutyType: string
 ) => {
-  const db = await getDb();
 
-  await db.runAsync(
+  const database = await getDb();
+
+  await database.runAsync(
     `
-    UPDATE daily_records
-    SET weather = ?
-    WHERE uuid = ?
-      AND duty_date = ?
+    INSERT OR REPLACE INTO duty_overrides
+    (uuid, duty_date, duty_type)
+    VALUES (?, ?, ?)
     `,
-    [weather, uuid, dutyDate]
+    [uuid, dutyDate, dutyType]
+  );
+};
+
+
+/* =========================
+   勤務例外取得
+========================= */
+
+export const getDutyOverride = async (
+  uuid: string,
+  dutyDate: string
+) => {
+
+  const database = await getDb();
+
+  return database.getFirstAsync<{ duty_type: string }>(
+    `
+    SELECT duty_type
+    FROM duty_overrides
+    WHERE uuid = ?
+    AND duty_date = ?
+    `,
+    [uuid, dutyDate]
   );
 };

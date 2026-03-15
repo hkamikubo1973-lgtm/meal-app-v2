@@ -6,6 +6,7 @@ export type CycleSettingsRow = {
   base_date: string;
   pattern_json: string;
   mode: CycleMode;
+  cycle_offset?: number;
 };
 
 export const saveCycleSettings = async (
@@ -14,26 +15,38 @@ export const saveCycleSettings = async (
   pattern: DutyType[],
   mode: CycleMode = 'cycle'
 ) => {
+
   const db = await getDb();
 
   await db.runAsync(
-    `
-    INSERT OR REPLACE INTO cycle_settings
-    (uuid, base_date, pattern_json, mode)
-    VALUES (?, ?, ?, ?)
-    `,
-    [
-      uuid,
-      baseDate,
-      JSON.stringify(pattern),
-      mode,
-    ]
+  `
+  INSERT OR REPLACE INTO cycle_settings
+  (uuid, base_date, pattern_json, mode, cycle_offset)
+  VALUES (
+    ?,
+    ?,
+    ?,
+    'cycle',
+    COALESCE(
+      (SELECT cycle_offset FROM cycle_settings WHERE uuid = ?),
+      0
+    )
+  )
+  `,
+  [
+   uuid,
+   baseDate,
+   JSON.stringify(pattern),
+   uuid
+  ]
   );
+
 };
 
 export const getCycleSettings = async (
   uuid: string
 ): Promise<CycleSettingsRow | null> => {
+
   const db = await getDb();
 
   const row = await db.getFirstAsync<CycleSettingsRow>(
@@ -46,4 +59,5 @@ export const getCycleSettings = async (
   );
 
   return row ?? null;
+
 };

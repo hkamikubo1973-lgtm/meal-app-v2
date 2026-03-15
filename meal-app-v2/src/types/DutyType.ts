@@ -1,9 +1,9 @@
 export type DutyType =
   | 'work'
+  | 'ake'
   | 'off'
   | 'public'
-  | 'paid';
-
-export type CycleMode =
-  | 'cycle'
-  | 'manual';
+  | 'paid'
+  | 'absence'
+  | 'late'
+  | 'leaveEarly';

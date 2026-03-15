@@ -1,14 +1,15 @@
 // src/components/TodayTotal.tsx
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   Alert,
-} from 'react-native';
+} from 'react-native'
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import {
   getTodayTotalSales,
@@ -17,10 +18,10 @@ import {
   getTodayWeather,
   updateWeatherByDutyDate,
   resetDailySalesByDutyDate,
-} from '../database/database';
+} from '../database/database'
 
-import { ActionCard } from './ActionCard';
-import { getTodayActionCard } from '../utils/getTodayActionCard';
+import { ActionCard } from './ActionCard'
+import { getTodayActionCard } from '../utils/getTodayActionCard'
 
 /* =====================
    定数
@@ -29,22 +30,22 @@ import { getTodayActionCard } from '../utils/getTodayActionCard';
 const TARGET_OPTIONS = Array.from(
   { length: 17 },
   (_, i) => 200000 + i * 50000
-); // 20万〜100万（5万刻み）
+)
 
-const CLOSING_OPTIONS = [5, 10, 15, 20, 25, 31];
+const CLOSING_OPTIONS = [5, 10, 15, 20, 25, 31]
 
-const TARGET_KEY = 'monthlyTarget';
-const CLOSING_DAY_KEY = 'closingDay';
+const TARGET_KEY = 'monthlyTarget'
+const CLOSING_DAY_KEY = 'closingDay'
 
-const WEATHER_LIST = ['晴', '曇', '雨', '雪', '荒天'] as const;
-type WeatherType = typeof WEATHER_LIST[number];
+const WEATHER_LIST = ['晴', '曇', '雨', '雪', '荒天'] as const
+type WeatherType = typeof WEATHER_LIST[number]
 
 type Props = {
-  uuid: string;
-  dutyDate: string;
-  refreshKey: number;
-  onRefresh: () => void;
-};
+  uuid: string
+  dutyDate: string
+  refreshKey: number
+  onRefresh: () => void
+}
 
 export default function TodayTotal({
   uuid,
@@ -53,109 +54,123 @@ export default function TodayTotal({
   onRefresh,
 }: Props) {
 
-  const [todayTotal, setTodayTotal] = useState(0);
-  const [monthTotal, setMonthTotal] = useState(0);
+  const [todayTotal, setTodayTotal] = useState(0)
+  const [monthTotal, setMonthTotal] = useState(0)
 
-  const [monthlyTarget, setMonthlyTarget] = useState<number>(450000);
-  const [closingDay, setClosingDay] = useState<number>(31);
+  const [monthlyTarget, setMonthlyTarget] = useState<number>(450000)
+  const [closingDay, setClosingDay] = useState<number>(31)
 
-  const [targetOpen, setTargetOpen] = useState(false);
-  const [closingOpen, setClosingOpen] = useState(false);
+  const [targetOpen, setTargetOpen] = useState(false)
+  const [closingOpen, setClosingOpen] = useState(false)
 
-  const [summary, setSummary] = useState<any>(null);
-  const [weather, setWeather] = useState<WeatherType | null>(null);
-  const [actionCard, setActionCard] = useState<any>(null);
-  const [open, setOpen] = useState(false);
+  const [summary, setSummary] = useState<any>(null)
+  const [weather, setWeather] = useState<WeatherType | null>(null)
+  const [actionCard, setActionCard] = useState<any>(null)
+
+  const [open, setOpen] = useState(false)
 
   /* =====================
      曜日取得
   ===================== */
 
   const getWeekday = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const weekdays = ['日','月','火','水','木','金','土'];
-    return weekdays[d.getDay()];
-  };
+    const d = new Date(dateStr)
+    const weekdays = ['日','月','火','水','木','金','土']
+    return weekdays[d.getDay()]
+  }
 
   /* =====================
      初期ロード
   ===================== */
 
   const load = async () => {
-  try {
-    const savedTarget = await AsyncStorage.getItem(TARGET_KEY);
-    const savedClosing = await AsyncStorage.getItem(CLOSING_DAY_KEY);
 
-    const target = savedTarget ? Number(savedTarget) : 450000;
-    const closing = savedClosing ? Number(savedClosing) : 31;
+    try {
 
-    setMonthlyTarget(target);
-    setClosingDay(closing);
+      const savedTarget = await AsyncStorage.getItem(TARGET_KEY)
+      const savedClosing = await AsyncStorage.getItem(CLOSING_DAY_KEY)
 
-    const today = await getTodayTotalSales(uuid, dutyDate);
-    const month = await getMonthlyTotalSales(uuid, dutyDate, closing);
-    const sum = await getDailySalesSummaryByDutyDate(uuid, dutyDate);
-    const w = await getTodayWeather(uuid, dutyDate);
+      const target = savedTarget ? Number(savedTarget) : 450000
+      const closing = savedClosing ? Number(savedClosing) : 31
 
-    setTodayTotal(today);
-    setMonthTotal(month);
-    setSummary(sum);
-    setWeather(w);
+      setMonthlyTarget(target)
+      setClosingDay(closing)
 
-    const card = await getTodayActionCard({ uuid, dutyDate } as any);
-    setActionCard(card);
-  } catch (e) {
-    console.log('LOAD ERROR:', e);
+      const today = await getTodayTotalSales(uuid, dutyDate)
+      const month = await getMonthlyTotalSales(uuid, dutyDate, closing)
+      const sum = await getDailySalesSummaryByDutyDate(uuid, dutyDate)
+      const w = await getTodayWeather(uuid, dutyDate)
+
+      setTodayTotal(today)
+      setMonthTotal(month)
+      setSummary(sum)
+      setWeather(w)
+
+      const card = await getTodayActionCard({ uuid, dutyDate } as any)
+      setActionCard(card)
+
+    } catch (e) {
+
+      console.log('LOAD ERROR:', e)
+
+    }
   }
-};
 
   useEffect(() => {
-    load();
-  }, [uuid, dutyDate, refreshKey]);
+    load()
+  }, [uuid, dutyDate, refreshKey])
 
-  const remaining = monthlyTarget - monthTotal;
+  const remaining = monthlyTarget - monthTotal
 
   /* =====================
      目標変更
   ===================== */
 
   const handleTargetChange = async (value: number) => {
-    await AsyncStorage.setItem(TARGET_KEY, String(value));
-    setMonthlyTarget(value);
-    setTargetOpen(false);
 
-    const month = await getMonthlyTotalSales(uuid, dutyDate, closingDay);
-    setMonthTotal(month);
-  };
+    await AsyncStorage.setItem(TARGET_KEY, String(value))
+
+    setMonthlyTarget(value)
+    setTargetOpen(false)
+
+    const month = await getMonthlyTotalSales(uuid, dutyDate, closingDay)
+    setMonthTotal(month)
+  }
 
   /* =====================
      締日変更
   ===================== */
 
   const handleClosingChange = async (day: number) => {
-    await AsyncStorage.setItem(CLOSING_DAY_KEY, String(day));
-    setClosingDay(day);
-    setClosingOpen(false);
 
-    const month = await getMonthlyTotalSales(uuid, dutyDate, day);
-    setMonthTotal(month);
-  };
+    await AsyncStorage.setItem(CLOSING_DAY_KEY, String(day))
+
+    setClosingDay(day)
+    setClosingOpen(false)
+
+    const month = await getMonthlyTotalSales(uuid, dutyDate, day)
+    setMonthTotal(month)
+  }
 
   /* =====================
      天気保存
   ===================== */
 
   const handleWeatherSelect = async (w: WeatherType) => {
-    await updateWeatherByDutyDate(uuid, dutyDate, w);
-    setWeather(w);
-    onRefresh();
-  };
+
+    await updateWeatherByDutyDate(uuid, dutyDate, w)
+
+    setWeather(w)
+
+    onRefresh()
+  }
 
   /* =====================
      売上リセット
   ===================== */
 
   const handleReset = () => {
+
     Alert.alert(
       '売上リセット',
       '本日の売上をすべて削除します。',
@@ -165,25 +180,29 @@ export default function TodayTotal({
           text: '削除する',
           style: 'destructive',
           onPress: async () => {
-            await resetDailySalesByDutyDate(uuid, dutyDate);
-            onRefresh();
+
+            await resetDailySalesByDutyDate(uuid, dutyDate)
+
+            onRefresh()
+
           },
         },
       ]
-    );
-  };
+    )
+  }
 
   return (
+
     <View style={styles.wrapper}>
 
       {actionCard?.message && (
         <ActionCard card={actionCard} />
       )}
 
-      {/* =====================
-         今月目標カード
-      ===================== */}
+      {/* 今月目標 */}
+
       <View style={styles.card}>
+
         <Text style={styles.title}>今月の売上目標</Text>
 
         <Pressable
@@ -199,6 +218,7 @@ export default function TodayTotal({
         {targetOpen && (
           <View style={styles.optionBox}>
             {TARGET_OPTIONS.map(v => (
+
               <Pressable
                 key={v}
                 onPress={() => handleTargetChange(v)}
@@ -213,6 +233,7 @@ export default function TodayTotal({
                   {v.toLocaleString()} 円
                 </Text>
               </Pressable>
+
             ))}
           </View>
         )}
@@ -230,6 +251,7 @@ export default function TodayTotal({
         {closingOpen && (
           <View style={styles.optionBox}>
             {CLOSING_OPTIONS.map(day => (
+
               <Pressable
                 key={day}
                 onPress={() => handleClosingChange(day)}
@@ -244,6 +266,7 @@ export default function TodayTotal({
                   {day === 31 ? '月末' : `${day}日`}
                 </Text>
               </Pressable>
+
             ))}
           </View>
         )}
@@ -262,20 +285,17 @@ export default function TodayTotal({
         <Text style={styles.sub}>
           今月累計：{monthTotal.toLocaleString()} 円
         </Text>
+
       </View>
 
-      {/* =====================
-         本日の売上
-      ===================== */}
+      {/* 本日の売上 */}
+
       <View style={styles.card}>
+
         <Text style={styles.title}>本日の売上</Text>
 
         <Text style={styles.sub}>
           出庫基準日：{dutyDate}（{getWeekday(dutyDate)}）
-        </Text>
-
-        <Text style={styles.note}>
-          ※日付は手動変更できます
         </Text>
 
         <Text style={styles.amount}>
@@ -283,7 +303,9 @@ export default function TodayTotal({
         </Text>
 
         <View style={styles.weatherRow}>
+
           {WEATHER_LIST.map(w => (
+
             <Pressable
               key={w}
               onPress={() => handleWeatherSelect(w)}
@@ -294,7 +316,9 @@ export default function TodayTotal({
             >
               <Text>{w}</Text>
             </Pressable>
+
           ))}
+
         </View>
 
         <Pressable onPress={() => setOpen(v => !v)}>
@@ -304,7 +328,9 @@ export default function TodayTotal({
         </Pressable>
 
         {open && summary && (
+
           <View style={styles.detail}>
+
             <Text>通常：{summary.normal?.toLocaleString()} 円</Text>
             <Text>貸切：{summary.charter?.toLocaleString()} 円</Text>
             <Text>その他：{summary.other?.toLocaleString()} 円</Text>
@@ -314,11 +340,15 @@ export default function TodayTotal({
                 本日の売上をリセット
               </Text>
             </Pressable>
+
           </View>
+
         )}
-            </View>
-          </View>
-  );
+
+      </View>
+
+    </View>
+  )
 }
 
 /* =====================
@@ -326,10 +356,12 @@ export default function TodayTotal({
 ===================== */
 
 const styles = StyleSheet.create({
+
   wrapper: {
     marginHorizontal: 12,
     marginTop: 4,
   },
+
   card: {
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
@@ -338,74 +370,85 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
+
   title: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
   },
+
   sub: {
     fontSize: 12,
     color: '#666',
   },
-  note: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 2,
-  },
+
   amount: {
     fontSize: 22,
     fontWeight: 'bold',
     marginVertical: 4,
   },
+
   remaining: {
     fontSize: 14,
     color: '#1976D2',
     fontWeight: '600',
   },
+
   remainingOk: {
     color: '#2E7D32',
   },
+
   selectorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
   },
+
   selectorLabel: {
     fontSize: 12,
     color: '#666',
   },
+
   selectorValue: {
     fontSize: 18,
     fontWeight: '800',
     color: '#1976D2',
   },
+
   optionBox: {
     marginTop: 4,
   },
+
   optionItem: {
     paddingVertical: 4,
   },
+
   optionText: {
     fontSize: 12,
     color: '#555',
   },
+
   optionSelected: {
     color: '#1976D2',
     fontWeight: '600',
   },
+
   toggle: {
     fontSize: 12,
     color: '#555',
     marginTop: 6,
   },
+
   detail: {
     marginTop: 6,
   },
+
   weatherRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 6,
   },
+
   weatherButton: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -415,10 +458,12 @@ const styles = StyleSheet.create({
     marginRight: 6,
     marginBottom: 6,
   },
+
   weatherSelected: {
     backgroundColor: '#E3F2FD',
     borderColor: '#1976D2',
   },
+
   reset: {
     marginTop: 10,
     padding: 10,
@@ -427,9 +472,11 @@ const styles = StyleSheet.create({
     borderColor: '#E57373',
     backgroundColor: '#FDECEA',
   },
+
   resetText: {
     color: '#C62828',
     fontWeight: '600',
     textAlign: 'center',
   },
-});
+
+})
