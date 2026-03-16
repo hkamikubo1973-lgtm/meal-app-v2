@@ -192,6 +192,23 @@ onLongPress={() => changeDateBy(30,'long-next')}
 
 </View>
 
+{/* アコーディオン */}
+
+<Pressable
+style={styles.accordionToggle}
+onPress={() => setOpenCycle(v => !v)}
+>
+<Text style={styles.accordionText}>
+{openCycle
+? '▲ 乗務サイクル設定・勤務修正を閉じる'
+: '▼ 乗務サイクル設定・勤務修正'}
+</Text>
+</Pressable>
+
+{openCycle && (
+
+<View style={styles.accordionBox}>
+
 {/* 勤務修正 */}
 
 <View style={styles.overrideBox}>
@@ -201,51 +218,36 @@ onLongPress={() => changeDateBy(30,'long-next')}
 </Text>
 
 <View style={styles.overrideRow}>
-  {(['work','paid','absence','late','leaveEarly'] as DutyType[])
-  .map((type) => (
+{(['work','paid','absence','late','leaveEarly'] as DutyType[])
+.map((type) => (
 
-    <Pressable
-      key={type}
-      style={styles.overrideButton}
-      onPress={() => onSetOverride(type)}
-    >
-      <Text style={styles.overrideText}>
-        {DUTY_LABEL[type]}
-      </Text>
-    </Pressable>
+<Pressable
+key={type}
+style={styles.overrideButton}
+onPress={() => onSetOverride(type)}
+>
+<Text style={styles.overrideText}>
+{DUTY_LABEL[type]}
+</Text>
+</Pressable>
 
-  ))}
+))}
 </View>
 
 <View style={styles.cancelRow}>
-  <Pressable
-    style={styles.cancelButton}
-    onPress={onResetOverride}
-  >
-    <Text style={styles.cancelText}>
-      修正解除
-    </Text>
-  </Pressable>
+<Pressable
+style={styles.cancelButton}
+onPress={onResetOverride}
+>
+<Text style={styles.cancelText}>
+修正解除
+</Text>
+</Pressable>
 </View>
 
 </View>
 
 {/* サイクル設定 */}
-
-<Pressable
-style={styles.accordionToggle}
-onPress={() => setOpenCycle(v => !v)}
->
-<Text style={styles.accordionText}>
-{openCycle
-? '▲ 乗務サイクル設定を閉じる'
-: '▼ 乗務サイクル設定'}
-</Text>
-</Pressable>
-
-{openCycle && (
-
-<View style={styles.accordionBox}>
 
 <Text style={styles.label}>
 基準日（サイクル初日）
@@ -276,6 +278,51 @@ placeholder="YYYY-MM-DD"
 （{DUTY_LABEL[cycleInfo.label]}）
 </Text>
 
+<View style={styles.cycleProgress}>
+
+{pattern && (
+<>
+<View style={styles.progressRow}>
+{pattern.slice(0,10).map((_,i)=>{
+
+const filled = cycleInfo && i < cycleInfo.day;
+
+return (
+<View
+key={i}
+style={[
+styles.progressBar,
+filled && styles.progressFilled
+]}
+/>
+);
+
+})}
+</View>
+
+<View style={styles.progressRow}>
+{pattern.slice(10,20).map((_,i)=>{
+
+const index = i + 10;
+const filled = cycleInfo && index < cycleInfo.day;
+
+return (
+<View
+key={index}
+style={[
+styles.progressBar,
+filled && styles.progressFilled
+]}
+/>
+);
+
+})}
+</View>
+</>
+)}
+
+</View>
+
 {localPattern && (
 
 <>
@@ -290,9 +337,11 @@ placeholder="YYYY-MM-DD"
 key={index}
 disabled={!editMode}
 onPress={()=>{
+
 const updated=[...localPattern];
 updated[index]=nextDuty(type);
 setLocalPattern(updated);
+
 }}
 style={[
 styles.patternChip,
@@ -361,9 +410,11 @@ onPress={()=>setEditMode(true)}
 <Pressable
 style={styles.cancelButton}
 onPress={()=>{
+
 setLocalPattern(pattern);
 setLocalBaseDate(baseDate ?? '');
 setEditMode(false);
+
 }}
 >
 <Text>キャンセル</Text>
@@ -523,20 +574,41 @@ backgroundColor:'#1976D2',
 borderRadius:6
 },
 
-cancelRow: {
-  marginTop: 8,
-  alignItems: 'center'
+cancelRow:{
+marginTop:8,
+alignItems:'center'
 },
 
-cancelButton: {
-  backgroundColor: '#FFEBEE',
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  borderRadius: 6
+cancelButton:{
+backgroundColor:'#FFEBEE',
+paddingVertical:6,
+paddingHorizontal:12,
+borderRadius:6
 },
 
-cancelText: {
-  color: '#C62828',
-  fontWeight: '600'
+cancelText:{
+color:'#C62828',
+fontWeight:'600'
+},
+
+cycleProgress:{
+marginTop:8
+},
+
+progressRow:{
+flexDirection:'row'
+},
+
+progressBar:{
+width:26,
+height:16,
+marginRight:4,
+marginBottom:4,
+backgroundColor:'#E0E0E0',
+borderRadius:4
+},
+
+progressFilled:{
+backgroundColor:'#1976D2'
 },
 });

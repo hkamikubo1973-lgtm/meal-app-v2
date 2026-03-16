@@ -155,14 +155,14 @@ export const getMonthlyTotalSales = async (
   const month = base.getMonth();
 
   const start =
-    closingDay === 31
-      ? new Date(year, month, 1)
-      : new Date(year, month, closingDay + 1);
+  base.getDate() > closingDay
+    ? new Date(year, month, closingDay + 1)
+    : new Date(year, month - 1, closingDay + 1);
 
-  const end =
-    closingDay === 31
-      ? new Date(year, month + 1, 0)
-      : new Date(year, month + 1, closingDay);
+const end =
+  base.getDate() > closingDay
+    ? new Date(year, month + 1, closingDay)
+    : new Date(year, month, closingDay);
 
   const startStr = start.toISOString().slice(0, 10);
   const endStr = end.toISOString().slice(0, 10);
