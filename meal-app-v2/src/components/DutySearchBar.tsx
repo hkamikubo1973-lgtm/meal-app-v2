@@ -153,6 +153,8 @@ export default function DutySearchBar({
 
   return (
 
+<View style={styles.screenContainer}>
+
 <View style={styles.wrapper}>
 
 {/* ヘッダー */}
@@ -218,7 +220,7 @@ onPress={() => setOpenCycle(v => !v)}
 </Text>
 
 <View style={styles.overrideRow}>
-{(['work','paid','absence','late','leaveEarly'] as DutyType[])
+{(['work','off','paid','absence','late','leaveEarly'] as DutyType[])
 .map((type) => (
 
 <Pressable
@@ -439,7 +441,7 @@ disabled={saving}
 )}
 
 </View>
-
+</View>
   );
 }
 
@@ -470,10 +472,10 @@ buttonText:{fontSize:16},
 center:{alignItems:'center'},
 
 date:{fontSize:22,fontWeight:'600'},
-dutyType:{fontSize:13,marginTop:2},
+dutyType:{fontSize:14,marginTop:2},
 
 accordionToggle:{paddingHorizontal:16,marginTop:12},
-accordionText:{fontSize:14,color:'#1976D2'},
+accordionText:{fontSize:13,color:'#1976D2'},
 
 accordionBox:{
 marginTop:6,
@@ -504,22 +506,23 @@ fontWeight:'600'
 },
 
 overrideBox:{marginTop:8,alignItems:'center'},
-overrideTitle:{fontSize:12,color:'#666',marginBottom:4},
+overrideTitle:{fontSize:14,color:'#666',marginBottom:4},
 
 overrideRow:{
-flexDirection:'row',
-justifyContent:'center',
-gap:8
+  flexDirection:'row',
+  flexWrap:'wrap',
+  gap:8,
+  marginBottom:3, 
 },
 
 overrideButton:{
-paddingVertical:6,
+paddingVertical:5,
 paddingHorizontal:10,
 backgroundColor:'#E3F2FD',
-borderRadius:6
+borderRadius:8
 },
 
-overrideText:{fontSize:12,fontWeight:'600'},
+overrideText:{fontSize:14,fontWeight:'600'},
 
 patternRow:{
 flexDirection:'row',
@@ -539,10 +542,10 @@ patternChipEdit:{
 backgroundColor:'#BBDEFB'
 },
 
-patternText:{fontSize:12,fontWeight:'600'},
+patternText:{fontSize:14,fontWeight:'600'},
 
 lengthButton:{
-paddingVertical:6,
+paddingVertical:8,
 paddingHorizontal:10,
 backgroundColor:'#E0E0E0',
 borderRadius:6,
@@ -568,27 +571,29 @@ marginTop:10
 },
 
 saveButton:{
-paddingVertical:8,
-paddingHorizontal:14,
-backgroundColor:'#1976D2',
-borderRadius:6
+  paddingVertical:6,
+  paddingHorizontal:10,
+  backgroundColor:'#1976D2',
+  borderRadius:8
 },
 
 cancelRow:{
-marginTop:8,
+marginTop:6,
 alignItems:'center'
 },
 
 cancelButton:{
-backgroundColor:'#FFEBEE',
-paddingVertical:6,
+backgroundColor:'#FDECEA',
+paddingVertical:4,
 paddingHorizontal:12,
-borderRadius:6
+borderRadius:6,
+marginBottom:12,
 },
 
 cancelText:{
 color:'#C62828',
-fontWeight:'600'
+fontWeight:'600',
+fontSize:14,
 },
 
 cycleProgress:{
@@ -610,5 +615,9 @@ borderRadius:4
 
 progressFilled:{
 backgroundColor:'#1976D2'
+},
+
+screenContainer: {
+  flex: 1,
 },
 });
