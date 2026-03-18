@@ -6,6 +6,8 @@ import {
   getTodayWeather,
 } from '../database/database';
 
+import { commonStyles } from '../styles/common';
+
 type Props = {
   uuid: string;
   dutyDate: string;
@@ -14,6 +16,7 @@ type Props = {
 const weatherOptions: WeatherType[] = ['晴', '曇', '雨', '雪', '荒天'];
 
 export default function WeatherPicker({ uuid, dutyDate }: Props) {
+
   const [selected, setSelected] = useState<WeatherType | null>(null);
 
   const loadWeather = async () => {
@@ -31,54 +34,43 @@ export default function WeatherPicker({ uuid, dutyDate }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.card}>
+
       {weatherOptions.map(w => (
+
         <TouchableOpacity
           key={w}
           onPress={() => onSelect(w)}
           style={[
-            styles.button,
-            selected === w && styles.selected,
+            commonStyles.chip,
+            selected === w && commonStyles.chipActive,
           ]}
         >
+
           <Text
             style={[
-              styles.text,
-              selected === w && styles.selectedText,
+              commonStyles.chipText,
+              selected === w && commonStyles.chipTextActive,
             ]}
           >
             {w}
           </Text>
+
         </TouchableOpacity>
+
       ))}
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 6,
   },
-  button: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
-  },
-  selected: {
-    backgroundColor: '#e6f0ff',
-    borderColor: '#3b82f6',
-  },
-  text: {
-    fontSize: 14,
-    color: '#333',
-  },
-  selectedText: {
-    color: '#2563eb',
-    fontWeight: 'bold',
-  },
+
 });

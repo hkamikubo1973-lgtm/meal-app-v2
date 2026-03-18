@@ -1,7 +1,22 @@
 // src/database/mealRecords.ts
+
 import { getDb } from './database';
 import { normalizeDutyDate } from '../utils/normalizeDutyDate';
 import { MealLabel } from '../types/MealLabel';
+
+/* =========================================
+   型定義（安全化）
+========================================= */
+type DailyMealMemo = {
+  id?: number;
+  uuid: string;
+  duty_date: string;
+  breakfast_memo: string;
+  lunch_memo: string;
+  dinner_memo: string;
+  snack_memo: string;
+  updated_at: string;
+};
 
 /* =========================================
    既存：食事レコード取得
@@ -13,19 +28,24 @@ export const getMealRecordsByDutyDate = async (
   const db = await getDb();
   const date = normalizeDutyDate(dutyDate);
 
-  return await db.getAllAsync(
-    `
-    SELECT *
-    FROM meal_records
-    WHERE uuid = ? AND duty_date = ?
-    ORDER BY created_at ASC
-    `,
-    [uuid, date]
-  );
+  try {
+    return await db.getAllAsync(
+      `
+      SELECT *
+      FROM meal_records
+      WHERE uuid = ? AND duty_date = ?
+      ORDER BY created_at ASC
+      `,
+      [uuid, date]
+    );
+  } catch (e) {
+    console.error('❌ getMealRecords error', e);
+    return [];
+  }
 };
 
 /* =========================================
-   食事レコード保存（安全重複防止のみ）
+   食事レコード保存（重複防止）
 ========================================= */
 export const insertMealRecord = async (
   uuid: string,
@@ -39,80 +59,77 @@ export const insertMealRecord = async (
   const nowDate = new Date();
   const now = nowDate.toISOString();
 
-  /* =========================================
-     ① 直前1件取得（同一日の最新）
-  ========================================= */
-  const last = await db.getFirstAsync<{
-  id: number;
-  meal_label: string;
-  created_at: string;
-  timing: string;
- }>(
-    `
-    SELECT *
-    FROM meal_records
-    WHERE uuid = ? AND duty_date = ?
-    ORDER BY created_at DESC
-    LIMIT 1
-    `,
-    [uuid, date]
-  );
-
-  /* =========================================
-     ② 5秒以内の同一ラベルなら保存しない
-  ========================================= */
-  if (last) {
-    const lastTime = new Date(last.created_at).getTime();
-    const diffSeconds =
-      (nowDate.getTime() - lastTime) / 1000;
-
-    if (
-     last.meal_label === mealLabel &&
-     last.timing === timing &&
-     diffSeconds <= 5
-    ) {
-      console.log('⛔ 重複防止：5秒以内の同一ラベル');
-      return;
-    }
-  }
-
-  /* =========================================
-     ③ 通常保存
-  ========================================= */
-  await db.withTransactionAsync(async () => {
-    await db.runAsync(
+  try {
+    const last = await db.getFirstAsync<{
+      id: number;
+      meal_label: string;
+      created_at: string;
+      timing: string;
+    }>(
       `
-      INSERT INTO meal_records (
-        uuid,
-        duty_date,
-        meal_label,
-        created_at,
-        timing
-      )
-      VALUES (?, ?, ?, ?, ?)
+      SELECT *
+      FROM meal_records
+      WHERE uuid = ? AND duty_date = ?
+      ORDER BY created_at DESC
+      LIMIT 1
       `,
-      [uuid, date, mealLabel, now, timing]
+      [uuid, date]
     );
-  });
+
+    if (last) {
+      const lastTime = new Date(last.created_at).getTime();
+      const diffSeconds =
+        (nowDate.getTime() - lastTime) / 1000;
+
+      if (
+        last.meal_label === mealLabel &&
+        last.timing === timing &&
+        diffSeconds <= 5
+      ) {
+        console.log('⛔ 重複防止');
+        return;
+      }
+    }
+
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        `
+        INSERT INTO meal_records (
+          uuid,
+          duty_date,
+          meal_label,
+          created_at,
+          timing
+        )
+        VALUES (?, ?, ?, ?, ?)
+        `,
+        [uuid, date, mealLabel, now, timing]
+      );
+    });
+
+  } catch (e) {
+    console.error('❌ insertMealRecord error', e);
+  }
 };
 
 /* =========================================
-   食事レコード削除（安全）
+   削除
 ========================================= */
 export const deleteMealRecord = async (id: number) => {
   const db = await getDb();
 
-  await db.runAsync(
-    `
-    DELETE FROM meal_records
-    WHERE id = ?
-    `,
-    [id]
-  );
+  try {
+    await db.runAsync(
+      `DELETE FROM meal_records WHERE id = ?`,
+      [id]
+    );
+  } catch (e) {
+    console.error('❌ delete error', e);
+  }
 };
 
 /* =========================================
-   Phase2.5：日次メモテーブル初期化
+   メモテーブル作成
 ========================================= */
 export const ensureDailyMealMemoTable = async () => {
   const db = await getDb();
@@ -132,27 +149,47 @@ export const ensureDailyMealMemoTable = async () => {
 };
 
 /* =========================================
-   日次メモ取得
+   メモ取得（完全安全版）
 ========================================= */
 export const getDailyMealMemo = async (
   uuid: string,
   dutyDate: string
-) => {
+): Promise<DailyMealMemo | null> => {
+
   const db = await getDb();
   const date = normalizeDutyDate(dutyDate);
 
-  return await db.getFirstAsync(
-    `
-    SELECT *
-    FROM daily_meal_memo
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, date]
-  );
+  try {
+    const result = await db.getFirstAsync<any>(
+      `
+      SELECT *
+      FROM daily_meal_memo
+      WHERE uuid = ? AND duty_date = ?
+      `,
+      [uuid, date]
+    );
+
+    if (!result) return null;
+
+    return {
+      id: result.id,
+      uuid: result.uuid,
+      duty_date: result.duty_date,
+      breakfast_memo: result.breakfast_memo ?? '',
+      lunch_memo: result.lunch_memo ?? '',
+      dinner_memo: result.dinner_memo ?? '',
+      snack_memo: result.snack_memo ?? '',
+      updated_at: result.updated_at,
+    };
+
+  } catch (e) {
+    console.error('❌ getDailyMealMemo error', e);
+    return null;
+  }
 };
 
 /* =========================================
-   日次メモ保存（upsert）
+   メモ保存（完全安全版）
 ========================================= */
 export const upsertDailyMealMemo = async (
   uuid: string,
@@ -168,59 +205,72 @@ export const upsertDailyMealMemo = async (
   const date = normalizeDutyDate(dutyDate);
   const now = new Date().toISOString();
 
-  const existing = await db.getFirstAsync(
-    `
-    SELECT id
-    FROM daily_meal_memo
-    WHERE uuid = ? AND duty_date = ?
-    `,
-    [uuid, date]
-  );
+  // ✅ 完全安全化
+  const safe = {
+    breakfast: memoMap.breakfast ?? '',
+    lunch: memoMap.lunch ?? '',
+    dinner: memoMap.dinner ?? '',
+    snack: memoMap.snack ?? '',
+  };
 
-  if (existing) {
-    await db.runAsync(
+  try {
+    const existing = await db.getFirstAsync(
       `
-      UPDATE daily_meal_memo
-      SET breakfast_memo = ?,
-          lunch_memo = ?,
-          dinner_memo = ?,
-          snack_memo = ?,
-          updated_at = ?
+      SELECT id
+      FROM daily_meal_memo
       WHERE uuid = ? AND duty_date = ?
       `,
-      [
-        memoMap.breakfast || '',
-        memoMap.lunch || '',
-        memoMap.dinner || '',
-        memoMap.snack || '',
-        now,
-        uuid,
-        date,
-      ]
+      [uuid, date]
     );
-  } else {
-    await db.runAsync(
-      `
-      INSERT INTO daily_meal_memo (
-        uuid,
-        duty_date,
-        breakfast_memo,
-        lunch_memo,
-        dinner_memo,
-        snack_memo,
-        updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      `,
-      [
-        uuid,
-        date,
-        memoMap.breakfast || '',
-        memoMap.lunch || '',
-        memoMap.dinner || '',
-        memoMap.snack || '',
-        now,
-      ]
-    );
+
+    if (existing) {
+      await db.runAsync(
+        `
+        UPDATE daily_meal_memo
+        SET breakfast_memo = ?,
+            lunch_memo = ?,
+            dinner_memo = ?,
+            snack_memo = ?,
+            updated_at = ?
+        WHERE uuid = ? AND duty_date = ?
+        `,
+        [
+          safe.breakfast,
+          safe.lunch,
+          safe.dinner,
+          safe.snack,
+          now,
+          uuid,
+          date,
+        ]
+      );
+    } else {
+      await db.runAsync(
+        `
+        INSERT INTO daily_meal_memo (
+          uuid,
+          duty_date,
+          breakfast_memo,
+          lunch_memo,
+          dinner_memo,
+          snack_memo,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          uuid,
+          date,
+          safe.breakfast,
+          safe.lunch,
+          safe.dinner,
+          safe.snack,
+          now,
+        ]
+      );
+    }
+
+  } catch (e) {
+    console.error('❌ upsertDailyMealMemo error', e);
   }
 };

@@ -1,6 +1,7 @@
 // src/components/RecordInputForm.tsx
 
 import React, { useState } from 'react';
+import { commonStyles } from '../styles/common';
 import {
   View,
   Text,
@@ -89,7 +90,7 @@ export default function RecordInputForm({
 
   return (
 
-    <View style={styles.card}>
+    <View style={commonStyles.card}>
 
       <Text style={styles.label}>
         売上金額（円）
@@ -162,17 +163,7 @@ export default function RecordInputForm({
 }
 
 const styles = StyleSheet.create({
-
-  card: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-
+  
   label: {
     fontSize: 16,
     fontWeight: '600',
@@ -183,7 +174,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal:12,  
     paddingVertical: 8,
     fontSize: 16,
     marginBottom: 12,

@@ -1,4 +1,5 @@
 // src/components/TodayRecordList.tsx
+
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,6 +12,8 @@ import {
   getDailyRecordsByDate,
   BusinessType,
 } from '../database/database';
+
+import { commonStyles } from '../styles/common';
 
 type Props = {
   uuid: string;
@@ -29,6 +32,7 @@ export default function TodayRecordList({
   dutyDate,
   refreshKey,
 }: Props) {
+
   const [summary, setSummary] = useState<Summary>({
     normal: 0,
     charter: 0,
@@ -66,27 +70,34 @@ export default function TodayRecordList({
   if (total === 0) return null;
 
   return (
-    <View style={styles.container}>
-      {/* タイトル（開閉） */}
-      <Pressable onPress={() => setOpen(v => !v)}>
-        <Text style={styles.title}>
-          売上内訳 {open ? '▲' : '▼'}
-        </Text>
-      </Pressable>
+    <View style={commonStyles.container}>
 
-      {/* 開いた時だけ表示 */}
-      {open && (
-        <>
-          <Row label="通常" value={summary.normal} />
-          <Row label="貸切" value={summary.charter} />
-          <Row label="その他" value={summary.other} />
+      <View style={commonStyles.card}>
 
-          {/* 将来拡張用 */}
-          <Text style={styles.detailHint}>
-            ▶ 詳細・売上リセット
+        {/* タイトル */}
+        <Pressable onPress={() => setOpen(v => !v)}>
+          <Text style={commonStyles.section}>
+            売上内訳 {open ? '▲' : '▼'}
           </Text>
-        </>
-      )}
+        </Pressable>
+
+        {/* 中身 */}
+        {open && (
+          <View style={styles.body}>
+
+            <Row label="通常" value={summary.normal} />
+            <Row label="貸切" value={summary.charter} />
+            <Row label="その他" value={summary.other} />
+
+            <Text style={commonStyles.textSub}>
+              ▶ 詳細・売上リセット
+            </Text>
+
+          </View>
+        )}
+
+      </View>
+
     </View>
   );
 }
@@ -99,11 +110,12 @@ function Row({
   label: string;
   value: number;
 }) {
+
   if (value === 0) return null;
 
   return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={commonStyles.rowBetween}>
+      <Text style={commonStyles.text}>{label}</Text>
       <Text style={styles.value}>
         {value.toLocaleString()} 円
       </Text>
@@ -111,38 +123,17 @@ function Row({
   );
 }
 
-/* =====================
-   styles
-===================== */
+/* ===================== styles ===================== */
+
 const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: 12,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  label: {
-    fontSize: 13,
-    color: '#333',
-  },
-  value: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  detailHint: {
-    fontSize: 12,
-    color: '#666',
+
+  body: {
     marginTop: 6,
   },
+
+  value: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
 });

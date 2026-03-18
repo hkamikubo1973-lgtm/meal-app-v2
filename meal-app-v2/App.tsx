@@ -11,6 +11,7 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
+  View,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +23,7 @@ import { getDutyType } from './src/utils/getDutyType';
 import { DutyType } from './src/types/DutyType';
 import { getCycleSettings } from './src/database/cycleSettings';
 import { saveCycleSettings } from './src/database/cycleSettings';
-import { setDutyOverride } from './src/database/dutyOverride';   // ←追加
+import { setDutyOverride } from './src/database/dutyOverride';
 import { clearDutyOverride } from './src/database/dutyOverride';
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
@@ -212,12 +213,13 @@ const handleResetOverride = async () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
 
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-
+        
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 16 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+     
           <DutySearchBar
             uuid={uuid}
             dutyDate={dutyDate}
@@ -304,6 +306,7 @@ const handleResetOverride = async () => {
 
         </ScrollView>
 
+        
       </KeyboardAvoidingView>
 
     </SafeAreaView>
@@ -321,8 +324,10 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    flexGrow: 1,
-    paddingBottom: 120,
+   flexGrow: 1,
   },
 
+  scrollContent: {
+  paddingBottom: 40,
+  },
 });

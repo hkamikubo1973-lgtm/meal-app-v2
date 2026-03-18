@@ -15,6 +15,7 @@ import {
 } from '../database/mealRecords';
 
 import { MealLabel } from '../types/MealLabel';
+import { commonStyles } from '../styles/common';
 
 type Props = {
   uuid: string;
@@ -24,14 +25,14 @@ type Props = {
 
 type TimingType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
-const TIMING_OPTIONS: { key: TimingType; label: string }[] = [
+const TIMING_OPTIONS = [
   { key: 'breakfast', label: '朝' },
   { key: 'lunch', label: '昼' },
   { key: 'dinner', label: '夜' },
   { key: 'snack', label: '間食' },
 ];
 
-const MEAL_LABELS: { key: MealLabel; label: string }[] = [
+const MEAL_LABELS = [
   { key: 'rice', label: 'ごはん・丼' },
   { key: 'noodle', label: '麺類' },
   { key: 'light', label: '軽食・パン' },
@@ -61,19 +62,17 @@ export default function MealInputButtons({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  /* ============================
-     メモロード
-  ============================ */
+  /* ===== メモロード ===== */
   useEffect(() => {
     const loadMemo = async () => {
       const row = await getDailyMealMemo(uuid, dutyDate);
 
       if (row) {
         setMemoMap({
-          breakfast: row.breakfast_memo || '',
-          lunch: row.lunch_memo || '',
-          dinner: row.dinner_memo || '',
-          snack: row.snack_memo || '',
+          breakfast: row.breakfast_memo ?? '',
+          lunch: row.lunch_memo ?? '',
+          dinner: row.dinner_memo ?? '',
+          snack: row.snack_memo ?? '',
         });
       } else {
         setMemoMap({});
@@ -85,36 +84,24 @@ export default function MealInputButtons({
     loadMemo();
   }, [uuid, dutyDate]);
 
-  /* ============================
-     食事追加（UI timingのみ保持）
-  ============================ */
+  /* ===== 食事追加 ===== */
   const handleAddMeal = async (mealLabel: MealLabel) => {
-  try {
-    await insertMealRecord(
-      uuid,
-      dutyDate,
-      selectedTiming,   // ← 追加
-      mealLabel
-    );
+    try {
+      await insertMealRecord(uuid, dutyDate, selectedTiming, mealLabel);
+      onMealRefresh();
+    } catch {
+      Alert.alert('エラー', '食事の記録に失敗しました');
+    }
+  };
 
-    console.log('UI_TIMING_SELECTED:', selectedTiming);
-
-    onMealRefresh();
-  } catch (e) {
-    Alert.alert('エラー', '食事の記録に失敗しました');
-  }
-};
-
-  /* ============================
-     メモ保存
-  ============================ */
+  /* ===== メモ保存 ===== */
   const handleSaveMemo = async () => {
     try {
       setSaving(true);
       await upsertDailyMealMemo(uuid, dutyDate, memoMap);
       setSaved(true);
       onMealRefresh();
-    } catch (e) {
+    } catch {
       Alert.alert('エラー', 'メモの保存に失敗しました');
     } finally {
       setSaving(false);
@@ -122,117 +109,108 @@ export default function MealInputButtons({
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>食事を記録</Text>
+    <View style={commonStyles.container}>
 
-      {/* ===== 時間帯選択 ===== */}
-      <View style={styles.timingRow}>
-        {TIMING_OPTIONS.map(item => (
-          <Pressable
-            key={item.key}
-            style={[
-              styles.timingButton,
-              selectedTiming === item.key && styles.timingActive,
-            ]}
-            onPress={() => setSelectedTiming(item.key)}
-          >
-            <Text
-              style={
-                selectedTiming === item.key
-                  ? styles.timingTextActive
-                  : styles.timingText
-              }
+      <View style={commonStyles.card}>
+
+        <Text style={commonStyles.section}>食事を記録</Text>
+
+        {/* ===== 時間帯 ===== */}
+        <View style={styles.timingRow}>
+          {TIMING_OPTIONS.map(item => (
+            <Pressable
+              key={item.key}
+              style={[
+                styles.timingButton,
+                selectedTiming === item.key && styles.timingActive,
+              ]}
+              onPress={() => setSelectedTiming(item.key as TimingType)}
             >
-              {item.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* ===== 食事ボタン ===== */}
-      <View style={styles.grid}>
-        {MEAL_LABELS.map(item => (
-          <Pressable
-            key={item.key}
-            style={styles.button}
-            onPress={() => handleAddMeal(item.key)}
-          >
-            <Text style={styles.text}>{item.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* ===== メモ ===== */}
-      <Pressable
-        style={styles.memoToggle}
-        onPress={() => setOpenMemo(v => !v)}
-      >
-        <Text style={styles.memoToggleText}>
-          {openMemo ? '▲ 補足メモを閉じる' : '▼ 補足メモを追加'}
-        </Text>
-      </Pressable>
-
-      {openMemo && (
-        <View style={styles.memoBox}>
-          {MEMO_ROWS.map(row => (
-            <View key={row.key} style={styles.memoRow}>
-              <Text style={styles.memoLabel}>{row.label}</Text>
-              <TextInput
-                style={styles.memoInput}
-                value={memoMap[row.key] || ''}
-                onChangeText={text =>
-                  setMemoMap({
-                    ...memoMap,
-                    [row.key]: text,
-                  })
+              <Text
+                style={
+                  selectedTiming === item.key
+                    ? styles.timingTextActive
+                    : styles.timingText
                 }
-                placeholder="補足メモ（任意）"
-                multiline
-                textAlignVertical="top"
-                maxLength={120}
-              />
-            </View>
+              >
+                {item.label}
+              </Text>
+            </Pressable>
           ))}
-
-          <Pressable
-            style={[styles.saveButton, saving && { opacity: 0.6 }]}
-            onPress={handleSaveMemo}
-            disabled={saving}
-          >
-            <Text style={styles.saveButtonText}>
-              {saving ? '保存中...' : 'メモを保存'}
-            </Text>
-          </Pressable>
-
-          {saved && (
-            <Text style={styles.savedText}>✔ 保存済み</Text>
-          )}
         </View>
-      )}
+
+        {/* ===== 食事ボタン ===== */}
+        <View style={styles.grid}>
+          {MEAL_LABELS.map(item => (
+            <Pressable
+              key={item.key}
+              style={styles.button}
+              onPress={() => handleAddMeal(item.key as MealLabel)}
+            >
+              <Text style={styles.text}>{item.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ===== メモ ===== */}
+        <Pressable onPress={() => setOpenMemo(v => !v)}>
+          <Text style={commonStyles.section}>
+            {openMemo ? '▲ 補足メモを閉じる' : '▼ 補足メモを追加'}
+          </Text>
+        </Pressable>
+
+        {openMemo && (
+          <View style={styles.memoBox}>
+            {MEMO_ROWS.map(row => (
+              <View key={row.key} style={styles.memoRow}>
+                <Text style={styles.memoLabel}>{row.label}</Text>
+
+                <TextInput
+                  style={commonStyles.input}
+                  value={memoMap[row.key] ?? ''}
+                  onChangeText={text =>
+                    setMemoMap({
+                      ...memoMap,
+                      [row.key]: text ?? '',
+                    })
+                  }
+                  placeholder="補足メモ（任意）"
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+            ))}
+
+            <Pressable
+              style={commonStyles.button}
+              onPress={handleSaveMemo}
+              disabled={saving}
+            >
+              <Text style={commonStyles.buttonText}>
+                {saving ? '保存中...' : 'メモを保存'}
+              </Text>
+            </Pressable>
+
+            {saved && (
+              <Text style={styles.savedText}>✔ 保存済み</Text>
+            )}
+          </View>
+        )}
+
+      </View>
     </View>
   );
 }
 
+/* ===== 個別スタイル（残す部分） ===== */
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
+
   timingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
   },
+
   timingButton: {
     flex: 1,
     marginHorizontal: 4,
@@ -243,24 +221,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+
   timingActive: {
     backgroundColor: '#1976D2',
     borderColor: '#1976D2',
   },
+
   timingText: {
     fontSize: 13,
     color: '#444',
   },
+
   timingTextActive: {
     fontSize: 13,
     color: '#fff',
     fontWeight: '600',
   },
+
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+
   button: {
     flexBasis: '48%',
     marginBottom: 8,
@@ -271,55 +254,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+
   text: {
     fontSize: 13,
     fontWeight: '500',
   },
-  memoToggle: {
-    marginTop: 6,
-  },
-  memoToggleText: {
-    fontSize: 13,
-    color: '#1976D2',
-  },
+
   memoBox: {
     marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderColor: '#EEE',
   },
+
   memoRow: {
     marginBottom: 10,
   },
+
   memoLabel: {
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
   },
-  memoInput: {
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 13,
-    minHeight: 60,
-  },
-  saveButton: {
-    marginTop: 6,
-    backgroundColor: '#1976D2',
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+
   savedText: {
     marginTop: 6,
     fontSize: 12,
     color: '#2E7D32',
     textAlign: 'center',
   },
+
 });

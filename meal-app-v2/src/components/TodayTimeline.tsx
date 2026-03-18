@@ -5,6 +5,7 @@ import {
   deleteMealRecord,
 } from '../database/mealRecords';
 import { MEAL_LABEL_JP } from './mealLabels';
+import { commonStyles } from '../styles/common';
 
 type Props = {
   uuid: string;
@@ -71,7 +72,7 @@ export default function TodayTimeline({
 
   if (meals.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={commonStyles.card}>
         <Text style={styles.empty}>
           食事記録はまだありません
         </Text>
@@ -80,7 +81,7 @@ export default function TodayTimeline({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.card}>
       {meals.map(m => {
         const time = new Date(m.created_at).toLocaleTimeString([], {
           hour: '2-digit',

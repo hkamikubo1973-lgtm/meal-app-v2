@@ -23,6 +23,8 @@ import {
 import { ActionCard } from './ActionCard'
 import { getTodayActionCard } from '../utils/getTodayActionCard'
 
+import { commonStyles } from '../styles/common'
+
 /* =====================
    定数
 ===================== */
@@ -193,17 +195,17 @@ export default function TodayTotal({
 
   return (
 
-    <View style={styles.wrapper}>
+    <View style={commonStyles.container}>
 
       {actionCard?.message && (
         <ActionCard card={actionCard} />
       )}
 
-      {/* 今月目標 */}
+      {/* ===== 今月目標 ===== */}
 
-      <View style={styles.card}>
+      <View style={commonStyles.card}>
 
-        <Text style={styles.title}>今月の売上目標</Text>
+        <Text style={commonStyles.section}>今月の売上目標</Text>
 
         <Pressable
           style={styles.selectorRow}
@@ -288,11 +290,11 @@ export default function TodayTotal({
 
       </View>
 
-      {/* 本日の売上 */}
+      {/* ===== 本日の売上 ===== */}
 
-      <View style={styles.card}>
+      <View style={commonStyles.card}>
 
-        <Text style={styles.title}>本日の売上</Text>
+        <Text style={commonStyles.section}>本日の売上</Text>
 
         <Text style={styles.sub}>
           出庫基準日：{dutyDate}（{getWeekday(dutyDate)}）
@@ -357,47 +359,6 @@ export default function TodayTotal({
 
 const styles = StyleSheet.create({
 
-  wrapper: {
-    marginHorizontal: 12,
-    marginTop: 4,
-  },
-
-  card: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-
-  sub: {
-    fontSize: 12,
-    color: '#666',
-  },
-
-  amount: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginVertical: 4,
-  },
-
-  remaining: {
-    fontSize: 14,
-    color: '#1976D2',
-    fontWeight: '600',
-  },
-
-  remainingOk: {
-    color: '#2E7D32',
-  },
-
   selectorRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -431,6 +392,27 @@ const styles = StyleSheet.create({
   optionSelected: {
     color: '#1976D2',
     fontWeight: '600',
+  },
+
+  sub: {
+    fontSize: 12,
+    color: '#666',
+  },
+
+  amount: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginVertical: 4,
+  },
+
+  remaining: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '600',
+  },
+
+  remainingOk: {
+    color: '#2E7D32',
   },
 
   toggle: {

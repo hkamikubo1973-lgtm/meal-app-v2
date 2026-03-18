@@ -7,7 +7,9 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+
 import { DutyType } from '../types/DutyType';
+import { commonStyles } from '../styles/common';
 
 type Props = {
   uuid: string;
@@ -46,13 +48,8 @@ export default function DutySearchBar({
   const [localBaseDate, setLocalBaseDate] = useState(baseDate ?? '');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setLocalPattern(pattern);
-  }, [pattern]);
-
-  useEffect(() => {
-    setLocalBaseDate(baseDate ?? '');
-  }, [baseDate]);
+  useEffect(() => setLocalPattern(pattern), [pattern]);
+  useEffect(() => setLocalBaseDate(baseDate ?? ''), [baseDate]);
 
   const DUTY_LABEL: Record<DutyType, string> = {
     work: '乗務',
@@ -65,17 +62,8 @@ export default function DutySearchBar({
     cancel: '取消',
   };
 
-  const nextDuty = (type: DutyType): DutyType => {
-    const order: DutyType[] = ['work', 'ake', 'off'];
-    const idx = order.indexOf(type);
-    return order[(idx + 1) % order.length];
-  };
-
   const cycleInfo = React.useMemo(() => {
-
-    if (!baseDate || !pattern || pattern.length === 0) {
-      return null;
-    }
+    if (!baseDate || !pattern || pattern.length === 0) return null;
 
     const base = new Date(baseDate);
     const current = new Date(dutyDate);
@@ -94,12 +82,12 @@ export default function DutySearchBar({
       day: index + 1,
       total: length,
       label: pattern[index],
+      index,
     };
 
   }, [baseDate, dutyDate, pattern]);
 
   const changeDateBy = (days: number, jumpType?: string) => {
-
     const [y, m, d] = dutyDate.split('-').map(Number);
     const date = new Date(y, m - 1, d);
 
@@ -113,7 +101,6 @@ export default function DutySearchBar({
       String(date.getDate()).padStart(2, '0');
 
     onChange(newDate, jumpType as any);
-
   };
 
   const isValidDate = (value: string) => {
@@ -121,7 +108,6 @@ export default function DutySearchBar({
   };
 
   const handleSave = async () => {
-
     if (!localPattern) return;
 
     if (!isValidDate(localBaseDate)) {
@@ -130,494 +116,249 @@ export default function DutySearchBar({
     }
 
     try {
-
       setSaving(true);
-
       await onSavePattern(localBaseDate, localPattern);
-
       setEditMode(false);
-
       Alert.alert('保存しました');
-
     } catch {
-
       Alert.alert('保存失敗');
-
     } finally {
-
       setSaving(false);
-
     }
-
   };
 
   return (
 
-<View style={styles.screenContainer}>
-
-<View style={styles.wrapper}>
-
-{/* ヘッダー */}
-
-<View style={styles.headerRow}>
-<Text style={styles.headerLeft}>乗務日検索</Text>
-<Text style={styles.headerCenter}>{jumpText ?? ''}</Text>
-<Text style={styles.headerRight}>※長押しで±30日</Text>
-</View>
-
-{/* 日付移動 */}
-
-<View style={styles.row}>
-
-<Pressable
-style={styles.button}
-onPress={() => changeDateBy(-1)}
-onLongPress={() => changeDateBy(-30,'long-prev')}
->
-<Text style={styles.buttonText}>◀ 前日</Text>
-</Pressable>
-
-<View style={styles.center}>
-<Text style={styles.date}>{dutyDate}</Text>
-<Text style={styles.dutyType}>
-{dutyType && DUTY_LABEL[dutyType]}
-</Text>
-</View>
-
-<Pressable
-style={styles.button}
-onPress={() => changeDateBy(1)}
-onLongPress={() => changeDateBy(30,'long-next')}
->
-<Text style={styles.buttonText}>翌日 ▶</Text>
-</Pressable>
-
-</View>
-
-{/* アコーディオン */}
-
-<Pressable
-style={styles.accordionToggle}
-onPress={() => setOpenCycle(v => !v)}
->
-<Text style={styles.accordionText}>
-{openCycle
-? '▲ 乗務サイクル設定・勤務修正を閉じる'
-: '▼ 乗務サイクル設定・勤務修正'}
-</Text>
-</Pressable>
-
-{openCycle && (
-
-<View style={styles.accordionBox}>
-
-{/* 勤務修正 */}
-
-<View style={styles.overrideBox}>
-
-<Text style={styles.overrideTitle}>
-勤務修正
-</Text>
-
-<View style={styles.overrideRow}>
-{(['work','off','paid','absence','late','leaveEarly'] as DutyType[])
-.map((type) => (
-
-<Pressable
-key={type}
-style={styles.overrideButton}
-onPress={() => onSetOverride(type)}
->
-<Text style={styles.overrideText}>
-{DUTY_LABEL[type]}
-</Text>
-</Pressable>
-
-))}
-</View>
-
-<View style={styles.cancelRow}>
-<Pressable
-style={styles.cancelButton}
-onPress={onResetOverride}
->
-<Text style={styles.cancelText}>
-修正解除
-</Text>
-</Pressable>
-</View>
-
-</View>
-
-{/* サイクル設定 */}
-
-<Text style={styles.label}>
-基準日（サイクル初日）
-</Text>
-
-{!editMode ? (
-
-<Text style={styles.value}>
-{localBaseDate || '未設定'}
-</Text>
-
-) : (
-
-<TextInput
-value={localBaseDate}
-onChangeText={setLocalBaseDate}
-style={styles.input}
-placeholder="YYYY-MM-DD"
-/>
-
-)}
-
-{cycleInfo && (
-
-<>
-<Text style={styles.cycleInfo}>
-サイクル {cycleInfo.day} / {cycleInfo.total} 日目
-（{DUTY_LABEL[cycleInfo.label]}）
-</Text>
-
-<View style={styles.cycleProgress}>
-
-{pattern && (
-<>
-<View style={styles.progressRow}>
-{pattern.slice(0,10).map((_,i)=>{
-
-const filled = cycleInfo && i < cycleInfo.day;
-
-return (
-<View
-key={i}
-style={[
-styles.progressBar,
-filled && styles.progressFilled
-]}
-/>
-);
-
-})}
-</View>
-
-<View style={styles.progressRow}>
-{pattern.slice(10,20).map((_,i)=>{
-
-const index = i + 10;
-const filled = cycleInfo && index < cycleInfo.day;
-
-return (
-<View
-key={index}
-style={[
-styles.progressBar,
-filled && styles.progressFilled
-]}
-/>
-);
-
-})}
-</View>
-</>
-)}
-
-</View>
-
-{localPattern && (
-
-<>
-<Text style={[styles.label,{marginTop:14}]}>
-パターン
-</Text>
-
-<View style={styles.patternRow}>
-{localPattern.map((type,index)=>(
-
-<Pressable
-key={index}
-disabled={!editMode}
-onPress={()=>{
-
-const updated=[...localPattern];
-updated[index]=nextDuty(type);
-setLocalPattern(updated);
-
-}}
-style={[
-styles.patternChip,
-editMode && styles.patternChipEdit
-]}
->
-
-<Text style={styles.patternText}>
-{DUTY_LABEL[type]}
-</Text>
-
-</Pressable>
-
-))}
-</View>
-
-<View style={{flexDirection:'row',marginTop:8}}>
-
-{localPattern.length < 20 && (
-
-<Pressable
-onPress={()=>setLocalPattern([...localPattern,'work'])}
-style={styles.lengthButton}
->
-<Text style={styles.lengthButtonText}>＋ 日追加</Text>
-</Pressable>
-
-)}
-
-{localPattern.length > 3 && (
-
-<Pressable
-onPress={()=>setLocalPattern(localPattern.slice(0,-1))}
-style={styles.lengthButton}
->
-<Text style={styles.lengthButtonText}>－ 日削除</Text>
-</Pressable>
-
-)}
-
-</View>
-
-</>
-
-)}
-
-</>
-
-)}
-
-{!editMode ? (
-
-<Pressable
-style={styles.editButton}
-onPress={()=>setEditMode(true)}
->
-<Text style={styles.editButtonText}>
-パターン編集
-</Text>
-</Pressable>
-
-) : (
-
-<View style={styles.saveRow}>
-
-<Pressable
-style={styles.cancelButton}
-onPress={()=>{
-
-setLocalPattern(pattern);
-setLocalBaseDate(baseDate ?? '');
-setEditMode(false);
-
-}}
->
-<Text>キャンセル</Text>
-</Pressable>
-
-<Pressable
-style={styles.saveButton}
-onPress={handleSave}
-disabled={saving}
->
-<Text style={{color:'#fff'}}>
-{saving ? '保存中...' : '保存'}
-</Text>
-</Pressable>
-
-</View>
-
-)}
-
-</View>
-
-)}
-
-</View>
-</View>
+    <View style={commonStyles.card}>
+
+      {/* ===== ヘッダー ===== */}
+      <View style={commonStyles.rowBetween}>
+        <Text style={commonStyles.sectionTitle}>乗務日検索</Text>
+        <Text style={commonStyles.text}>{jumpText ?? ''}</Text>
+        <Text style={commonStyles.textSub}>※長押しで±30日</Text>
+      </View>
+
+      {/* ===== 日付移動 ===== */}
+      <View style={[commonStyles.rowBetween, { marginTop: 12 }]}>
+
+        <Pressable
+          style={commonStyles.buttonOutline}
+          onPress={() => changeDateBy(-1)}
+          onLongPress={() => changeDateBy(-30,'long-prev')}
+        >
+          <Text style={commonStyles.buttonOutlineText}>◀ 前日</Text>
+        </Pressable>
+
+        <View style={styles.center}>
+          <Text style={styles.date}>{dutyDate}</Text>
+          <Text style={commonStyles.text}>
+            {dutyType && DUTY_LABEL[dutyType]}
+          </Text>
+        </View>
+
+        <Pressable
+          style={commonStyles.buttonOutline}
+          onPress={() => changeDateBy(1)}
+          onLongPress={() => changeDateBy(30,'long-next')}
+        >
+          <Text style={commonStyles.buttonOutlineText}>翌日 ▶</Text>
+        </Pressable>
+
+      </View>
+
+      {/* ===== アコーディオン ===== */}
+      <Pressable
+        style={styles.accordionToggle}
+        onPress={() => setOpenCycle(v => !v)}
+      >
+        <Text style={commonStyles.textSub}>
+          {openCycle
+            ? '▲ 乗務サイクル設定・勤務修正を閉じる'
+            : '▼ 乗務サイクル設定・勤務修正'}
+        </Text>
+      </Pressable>
+
+      {openCycle && (
+
+        <View style={[commonStyles.card, { marginTop: 12 }]}>
+
+          {/* ===== 勤務修正 ===== */}
+          <Text style={commonStyles.section}>勤務修正</Text>
+
+          <View style={styles.overrideRow}>
+            {(['work','off','paid','absence','late','leaveEarly'] as DutyType[])
+            .map((type) => (
+              <Pressable
+                key={type}
+                style={commonStyles.chip}
+                onPress={() => onSetOverride(type)}
+              >
+                <Text style={commonStyles.chipText}>
+                  {DUTY_LABEL[type]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Pressable
+            style={commonStyles.buttonDanger}
+            onPress={onResetOverride}
+          >
+            <Text style={commonStyles.buttonDangerText}>
+              修正解除
+            </Text>
+          </Pressable>
+
+          {/* ===== サイクル ===== */}
+          <Text style={commonStyles.section}>サイクル設定</Text>
+
+          <Text style={commonStyles.textSub}>
+            基準日（サイクル初日）
+          </Text>
+
+          {!editMode ? (
+            <Text style={commonStyles.text}>
+              {localBaseDate || '未設定'}
+            </Text>
+          ) : (
+            <TextInput
+              value={localBaseDate}
+              onChangeText={setLocalBaseDate}
+              style={commonStyles.input}
+              placeholder="YYYY-MM-DD"
+            />
+          )}
+
+          {cycleInfo && (
+            <Text style={commonStyles.textSub}>
+              サイクル {cycleInfo.day} / {cycleInfo.total} 日目（{DUTY_LABEL[cycleInfo.label]}）
+            </Text>
+          )}
+
+          {/* ===== バー表示 ===== */}
+          {pattern && (
+            <View style={styles.barRow}>
+              {pattern.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.bar,
+                    i === cycleInfo?.index && styles.barActive
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* ===== パターン ===== */}
+          <Text style={commonStyles.section}>パターン</Text>
+
+          <View style={styles.patternWrap}>
+            {pattern?.map((p, i) => (
+              <View key={i} style={commonStyles.chip}>
+                <Text style={commonStyles.chipText}>
+                  {DUTY_LABEL[p]}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* ===== 保存 ===== */}
+          {!editMode ? (
+
+            <Pressable
+              style={commonStyles.buttonOutline}
+              onPress={()=>setEditMode(true)}
+            >
+              <Text style={commonStyles.buttonOutlineText}>
+                パターン編集
+              </Text>
+            </Pressable>
+
+          ) : (
+
+            <View style={commonStyles.rowBetween}>
+
+              <Pressable
+                style={commonStyles.buttonOutline}
+                onPress={()=>{
+                  setLocalPattern(pattern);
+                  setLocalBaseDate(baseDate ?? '');
+                  setEditMode(false);
+                }}
+              >
+                <Text style={commonStyles.buttonOutlineText}>
+                  キャンセル
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={commonStyles.button}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                <Text style={commonStyles.buttonText}>
+                  {saving ? '保存中...' : '保存'}
+                </Text>
+              </Pressable>
+
+            </View>
+
+          )}
+
+        </View>
+
+      )}
+
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
 
-wrapper:{paddingVertical:14},
+  center: {
+    alignItems: 'center',
+  },
 
-headerRow:{
-flexDirection:'row',
-justifyContent:'space-between',
-paddingHorizontal:16
-},
+  date: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
 
-headerLeft:{fontSize:18,fontWeight:'bold'},
-headerCenter:{fontSize:16,fontWeight:'600'},
-headerRight:{fontSize:11,color:'#888'},
+  accordionToggle: {
+    marginTop: 12,
+  },
 
-row:{
-flexDirection:'row',
-justifyContent:'space-between',
-paddingHorizontal:16,
-marginTop:10
-},
+  overrideRow: {
+    flexDirection:'row',
+    flexWrap:'wrap',
+    gap:8,
+    marginBottom:8,
+  },
 
-button:{paddingVertical:8},
-buttonText:{fontSize:16},
+  barRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginVertical: 8,
+  },
 
-center:{alignItems:'center'},
+  bar: {
+    width: 18,
+    height: 10,
+    backgroundColor: '#90CAF9',
+    borderRadius: 3,
+  },
 
-date:{fontSize:22,fontWeight:'600'},
-dutyType:{fontSize:14,marginTop:2},
+  barActive: {
+    backgroundColor: '#1976D2',
+  },
 
-accordionToggle:{paddingHorizontal:16,marginTop:12},
-accordionText:{fontSize:13,color:'#1976D2'},
+  patternWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
 
-accordionBox:{
-marginTop:6,
-marginHorizontal:16,
-padding:12,
-backgroundColor:'#F9FAFB',
-borderRadius:8,
-borderWidth:1,
-borderColor:'#E0E0E0'
-},
-
-label:{fontSize:12,color:'#666'},
-value:{fontSize:16,fontWeight:'600'},
-
-input:{
-borderWidth:1,
-borderColor:'#ccc',
-padding:6,
-borderRadius:4,
-marginTop:4
-},
-
-cycleInfo:{
-marginTop:6,
-fontSize:13,
-color:'#555',
-fontWeight:'600'
-},
-
-overrideBox:{marginTop:8,alignItems:'center'},
-overrideTitle:{fontSize:14,color:'#666',marginBottom:4},
-
-overrideRow:{
-  flexDirection:'row',
-  flexWrap:'wrap',
-  gap:8,
-  marginBottom:3, 
-},
-
-overrideButton:{
-paddingVertical:5,
-paddingHorizontal:10,
-backgroundColor:'#E3F2FD',
-borderRadius:8
-},
-
-overrideText:{fontSize:14,fontWeight:'600'},
-
-patternRow:{
-flexDirection:'row',
-flexWrap:'wrap',
-gap:6,
-marginTop:6
-},
-
-patternChip:{
-paddingVertical:6,
-paddingHorizontal:10,
-backgroundColor:'#EEE',
-borderRadius:6
-},
-
-patternChipEdit:{
-backgroundColor:'#BBDEFB'
-},
-
-patternText:{fontSize:14,fontWeight:'600'},
-
-lengthButton:{
-paddingVertical:8,
-paddingHorizontal:10,
-backgroundColor:'#E0E0E0',
-borderRadius:6,
-marginRight:6
-},
-
-lengthButtonText:{fontSize:12},
-
-editButton:{
-marginTop:10,
-paddingVertical:8,
-backgroundColor:'#E3F2FD',
-alignItems:'center',
-borderRadius:6
-},
-
-editButtonText:{fontWeight:'600'},
-
-saveRow:{
-flexDirection:'row',
-justifyContent:'space-between',
-marginTop:10
-},
-
-saveButton:{
-  paddingVertical:6,
-  paddingHorizontal:10,
-  backgroundColor:'#1976D2',
-  borderRadius:8
-},
-
-cancelRow:{
-marginTop:6,
-alignItems:'center'
-},
-
-cancelButton:{
-backgroundColor:'#FDECEA',
-paddingVertical:4,
-paddingHorizontal:12,
-borderRadius:6,
-marginBottom:12,
-},
-
-cancelText:{
-color:'#C62828',
-fontWeight:'600',
-fontSize:14,
-},
-
-cycleProgress:{
-marginTop:8
-},
-
-progressRow:{
-flexDirection:'row'
-},
-
-progressBar:{
-width:26,
-height:16,
-marginRight:4,
-marginBottom:4,
-backgroundColor:'#E0E0E0',
-borderRadius:4
-},
-
-progressFilled:{
-backgroundColor:'#1976D2'
-},
-
-screenContainer: {
-  flex: 1,
-},
 });

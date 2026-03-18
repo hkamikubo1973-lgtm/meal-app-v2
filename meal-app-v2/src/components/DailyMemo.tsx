@@ -11,6 +11,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 
+import { commonStyles } from '../styles/common';
+
 type Props = {
   uuid: string;
   dutyDate: string;
@@ -28,6 +30,7 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
 
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [focus, setFocus] = useState<string | null>(null);
 
   const [data, setData] = useState<MemoData>({
     time1: '',
@@ -50,9 +53,16 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
     if (!raw) return;
 
     try {
-      setData(JSON.parse(raw));
+      const parsed = JSON.parse(raw);
+      setData({
+        time1: parsed.time1 ?? '',
+        text1: parsed.text1 ?? '',
+        time2: parsed.time2 ?? '',
+        text2: parsed.text2 ?? '',
+        free: parsed.free ?? '',
+      });
     } catch {
-      setData(prev => ({ ...prev, free: raw }));
+      setData(prev => ({ ...prev, free: raw ?? '' }));
     }
   };
 
@@ -64,11 +74,10 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
   };
 
   const update = (key: keyof MemoData, value: string) => {
-    setData(prev => ({ ...prev, [key]: value }));
+    setData(prev => ({ ...prev, [key]: value ?? '' }));
   };
 
-  
-  /* ===================== 共通Picker ===================== */
+  /* ===================== TimePicker ===================== */
   const TimePicker = ({
     value,
     onChange,
@@ -76,36 +85,35 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
     value: string;
     onChange: (v: string) => void;
   }) => {
-    const h = value.split(':')[0] || '';
-    const m = value.split(':')[1] || '';
+
+    const h = value?.split(':')[0] || '00';
+    const m = value?.split(':')[1] || '00';
 
     return (
       <View style={styles.timeRow}>
-
         <Picker
           selectedValue={h}
           style={styles.picker}
-          onValueChange={(val) => onChange(`${val}:${m || '00'}`)}
+          onValueChange={(val) => onChange(`${val}:${m}`)}
         >
-          <Picker.Item label="時" value="" />
-          {Array.from({ length: 24 }).map((_, i) => {
+          {Array.from({ length: 24 }, (_, i) => {
             const v = String(i).padStart(2, '0');
             return <Picker.Item key={v} label={v} value={v} />;
           })}
         </Picker>
 
+        <Text style={{ marginHorizontal: 4 }}>:</Text>
+
         <Picker
           selectedValue={m}
           style={styles.picker}
-          onValueChange={(val) => onChange(`${h || '00'}:${val}`)}
+          onValueChange={(val) => onChange(`${h}:${val}`)}
         >
-          <Picker.Item label="分" value="" />
-          {[0,5,10,15,20,25,30,35,40,45,50,55].map(v => {
-            const val = String(v).padStart(2, '0');
-            return <Picker.Item key={val} label={val} value={val} />;
-          })}
+          {['00','05','10','15','20','25','30','35','40','45','50','55']
+            .map((v) => (
+              <Picker.Item key={v} label={v} value={v} />
+            ))}
         </Picker>
-
       </View>
     );
   };
@@ -113,72 +121,85 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
   /* ===================== UI ===================== */
 
   return (
-    <View style={styles.wrapper}>
 
+    <View style={commonStyles.card}>
+
+      {/* ===== タイトル ===== */}
       <Pressable onPress={() => setOpen(v => !v)}>
-        <Text style={styles.toggle}>
+        <Text style={commonStyles.textSub}>
           {open ? '▲ 今日の予定・メモを閉じる' : '▼ 今日の予定・メモを表示'}
         </Text>
       </Pressable>
 
       {open && (
-        <View style={styles.box}>
 
+        <>
           {/* ===== ①予定 ===== */}
-          <Text style={styles.label}>①予定</Text>
+          <Text style={commonStyles.section}>①予定</Text>
 
-          <View style={styles.row}>
-            <TimePicker
-              value={data.time1}
-              onChange={(v) => update('time1', v)}
-            />
-
-            <TextInput
-              style={styles.text}
-              placeholder="予定内容"
-              multiline
-              value={data.text1}
-              onChangeText={(v) => update('text1', v)}
-            />
-          </View>
-
-          {/* ===== ②予定 ===== */}
-          <Text style={styles.label}>②予定</Text>
-
-          <View style={styles.row}>
-            <TimePicker
-              value={data.time2}
-              onChange={(v) => update('time2', v)}
-            />
-
-            <TextInput
-              style={styles.text}
-              placeholder="予定内容"
-              multiline
-              value={data.text2}
-              onChangeText={(v) => update('text2', v)}
-            />
-          </View>
-
-          {/* ===== メモ ===== */}
-          <Text style={styles.label}>メモ</Text>
-
-          <TextInput
-            style={styles.free}
-            placeholder="自由記入"
-            multiline
-            value={data.free}
-            onChangeText={(v) => update('free', v)}
+          <TimePicker
+            value={data.time1}
+            onChange={(v) => update('time1', v)}
           />
 
-        </View>
-      )}
+          <TextInput
+            style={[
+              commonStyles.input,
+              focus === 'text1' && styles.inputFocused,
+            ]}
+            placeholder="予定内容"
+            placeholderTextColor="#90A4AE"
+            value={data.text1}
+            onChangeText={(v) => update('text1', v)}
+            onFocus={() => setFocus('text1')}
+            onBlur={() => setFocus(null)}
+          />
 
-      {/* ===== 固定保存ボタン ===== */}
-      {open && (
-        <View style={styles.fixedSave}>
-          <Pressable style={styles.saveButton} onPress={saveMemo}>
-            <Text style={styles.saveText}>保存</Text>
+          {/* ===== ②予定 ===== */}
+          <Text style={commonStyles.section}>②予定</Text>
+
+          <TimePicker
+            value={data.time2}
+            onChange={(v) => update('time2', v)}
+          />
+
+          <TextInput
+            style={[
+              commonStyles.input,
+              focus === 'text2' && styles.inputFocused,
+            ]}
+            placeholder="予定内容"
+            placeholderTextColor="#90A4AE"
+            value={data.text2}
+            onChangeText={(v) => update('text2', v)}
+            onFocus={() => setFocus('text2')}
+            onBlur={() => setFocus(null)}
+          />
+
+          {/* ===== メモ ===== */}
+          <Text style={commonStyles.section}>メモ</Text>
+
+          <TextInput
+            style={[
+              commonStyles.input,
+              styles.memo,
+              focus === 'free' && styles.inputFocused,
+            ]}
+            multiline
+            placeholder="メモ"
+            placeholderTextColor="#90A4AE"
+            value={data.free}
+            onChangeText={(v) => update('free', v)}
+            onFocus={() => setFocus('free')}
+            onBlur={() => setFocus(null)}
+          />
+
+          {/* ===== 保存 ===== */}
+          <Pressable
+            style={[commonStyles.button, { marginTop: 12 }]}
+            onPress={saveMemo}
+          >
+            <Text style={commonStyles.buttonText}>保存</Text>
           </Pressable>
 
           {saved && (
@@ -186,111 +207,44 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
               ✓ 保存しました
             </Text>
           )}
-        </View>
+
+        </>
       )}
 
     </View>
   );
 }
 
-/* ===================== style ===================== */
+/* ===================== styles ===================== */
 
 const styles = StyleSheet.create({
 
-  wrapper: {
-    marginHorizontal: 12,
-  },
-
-  toggle: {
-  fontSize: 13,
-  color: '#1976D2',
-  paddingHorizontal: 4,
-  paddingVertical: 4,
-},
-
-  box: {
-    marginTop: 6,
-    backgroundColor: '#F9FAFB',
-    padding: 10,
-    paddingBottom: 90,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#555',
-  },
-
-  row: {
-    marginBottom: 10,
-  },
-
   timeRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    marginTop: 4,
   },
 
   picker: {
-  flex: 1,
-  height: 60,
-},
+    flex: 1,
+    height: 60,
+  },
 
-timeRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#fff',
-  borderRadius: 8,
-  borderWidth: 1,
-  borderColor: '#ddd',
-  paddingHorizontal: 4,
-},
+  inputFocused: {
+    borderColor: '#1976D2',
+    borderWidth: 2,
+  },
 
-  text: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    minHeight: 40,
+  memo: {
+    minHeight: 80,
     textAlignVertical: 'top',
-  },
-
-  free: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    minHeight: 70,
-    textAlignVertical: 'top',
-  },
-
-  fixedSave: {
-    position: 'absolute',
-    bottom: 20,
-    left: 12,
-    right: 12,
-  },
-
-  saveButton: {
-    backgroundColor: '#1976D2',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-
-  saveText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
   },
 
   savedMessage: {
-    marginTop: 4,
-    color: '#2E7D32',
-    fontSize: 12,
     textAlign: 'center',
+    marginTop: 6,
+    color: '#4CAF50',
   },
 
 });

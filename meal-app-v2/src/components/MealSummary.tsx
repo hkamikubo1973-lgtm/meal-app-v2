@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { getMealSummaryByDate } from '../database/database';
+import { commonStyles } from '../styles/common';
 
 type Props = {
   date: string;
@@ -21,7 +22,7 @@ export default function MealSummary({ date, refreshKey }: Props) {
   }, [date, refreshKey]);
 
   return (
-    <View style={styles.card}>
+    <View style={commonStyles.card}>
       <Text style={styles.title}>今日の食事</Text>
 
       <Text style={styles.total}>合計：{total} 件</Text>
@@ -40,12 +41,7 @@ export default function MealSummary({ date, refreshKey }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: 12,
-    margin: 12,
-    borderRadius: 8,
-    backgroundColor: '#f2f2f2',
-  },
+ 
   title: {
     fontSize: 16,
     fontWeight: 'bold',

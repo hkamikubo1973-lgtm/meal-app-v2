@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import { getDailyMealMemo } from '../database/mealRecords';
+import { commonStyles } from '../styles/common';
 
 type Props = {
   uuid: string;
@@ -44,60 +45,43 @@ export default function DailyMealSummary({
   if (memoList.length === 0) return null;
 
   return (
-    <View style={styles.card}>
-      <Pressable
-        style={styles.header}
-        onPress={() => setOpen(v => !v)}
-      >
-        <Text style={styles.title}>
-          📝 今日のまとめ（{memoList.length}件）
-        </Text>
-        <Text style={styles.toggle}>
-          {open ? '▲' : '▼'}
-        </Text>
-      </Pressable>
+    <View style={commonStyles.container}>
 
-      {open && (
-        <View style={styles.body}>
-          {memoList.map((m, i) => (
-            <Text key={i} style={styles.line}>
-              {m.label}：{m.value}
-            </Text>
-          ))}
-        </View>
-      )}
+      <View style={commonStyles.card}>
+
+        <Pressable
+          style={commonStyles.rowBetween}
+          onPress={() => setOpen(v => !v)}
+        >
+          <Text style={commonStyles.section}>
+            📝 今日のまとめ（{memoList.length}件）
+          </Text>
+
+          <Text style={commonStyles.textSub}>
+            {open ? '▲' : '▼'}
+          </Text>
+        </Pressable>
+
+        {open && (
+          <View style={styles.body}>
+            {memoList.map((m, i) => (
+              <Text key={i} style={commonStyles.text}>
+                {m.label}：{m.value}
+              </Text>
+            ))}
+          </View>
+        )}
+
+      </View>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginTop: 8,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#EEE',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  toggle: {
-    fontSize: 14,
-    color: '#666',
-  },
+
   body: {
     marginTop: 6,
   },
-  line: {
-    fontSize: 13,
-    color: '#444',
-    marginBottom: 4,
-  },
+
 });
