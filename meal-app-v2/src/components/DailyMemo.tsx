@@ -248,22 +248,6 @@ timeRow: {
   paddingHorizontal: 4,
 },
 
-  nowBtn: {
-    alignSelf: 'flex-end',
-    marginTop: 4,
-    marginBottom: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 6,
-  },
-
-  nowText: {
-    fontSize: 12,
-    color: '#1976D2',
-    fontWeight: '600',
-  },
-
   text: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
