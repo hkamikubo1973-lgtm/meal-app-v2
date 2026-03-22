@@ -50,7 +50,17 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
 
   const loadMemo = async () => {
     const raw = await AsyncStorage.getItem(storageKey);
-    if (!raw) return;
+
+    if (!raw) {
+      setData({
+        time1: '',
+        text1: '',
+        time2: '',
+        text2: '',
+        free: '',
+      });
+      return;
+    }
 
     try {
       const parsed = JSON.parse(raw);
@@ -66,15 +76,41 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
     }
   };
 
-  /* ===================== 保存 ===================== */
-  const saveMemo = async () => {
-    await AsyncStorage.setItem(storageKey, JSON.stringify(data));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  };
-
+  /* ===================== 更新 ===================== */
   const update = (key: keyof MemoData, value: string) => {
     setData(prev => ({ ...prev, [key]: value ?? '' }));
+  };
+
+  /* ===================== 空判定 ===================== */
+  const isEmpty = (v: any) =>
+    typeof v !== 'string' || v.trim() === '';
+
+  /* ===================== メモ有無判定 ===================== */
+  const hasMemo =
+    !isEmpty(data.text1) ||
+    !isEmpty(data.text2) ||
+    !isEmpty(data.free) ||
+    (typeof data.time1 === 'string' && data.time1 !== '00:00' && data.time1 !== '') ||
+    (typeof data.time2 === 'string' && data.time2 !== '00:00' && data.time2 !== '');
+
+  /* ===================== 保存 ===================== */
+  const saveMemo = async () => {
+
+    const isAllEmpty =
+      isEmpty(data.text1) &&
+      isEmpty(data.text2) &&
+      isEmpty(data.free) &&
+      (data.time1 === '' || data.time1 === '00:00') &&
+      (data.time2 === '' || data.time2 === '00:00');
+
+    if (isAllEmpty) {
+      await AsyncStorage.removeItem(storageKey);
+    } else {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(data));
+    }
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   /* ===================== TimePicker ===================== */
@@ -124,11 +160,23 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
 
     <View style={commonStyles.card}>
 
-      {/* ===== タイトル ===== */}
-      <Pressable onPress={() => setOpen(v => !v)}>
+      {/* ===== トグル ===== */}
+      <Pressable
+        onPress={() => setOpen(v => !v)}
+        style={[
+          styles.toggleWrapper,
+          hasMemo && styles.toggleActive
+        ]}
+      >
         <Text style={commonStyles.textSub}>
-          {open ? '▲ 今日の予定・メモを閉じる' : '▼ 今日の予定・メモを表示'}
+          {open
+            ? '▲ 今日の予定・メモを閉じる'
+            : '▼ 今日の予定・メモを表示'}
         </Text>
+
+        {hasMemo && !open && (
+          <Text style={styles.dot}>●</Text>
+        )}
       </Pressable>
 
       {open && (
@@ -207,7 +255,6 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
               ✓ 保存しました
             </Text>
           )}
-
         </>
       )}
 
@@ -218,6 +265,23 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
 /* ===================== styles ===================== */
 
 const styles = StyleSheet.create({
+
+  toggleWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 6,
+    borderRadius: 10,
+  },
+
+  toggleActive: {
+    backgroundColor: '#E3F2FD',
+  },
+
+  dot: {
+    color: '#1976D2',
+    fontWeight: 'bold',
+  },
 
   timeRow: {
     flexDirection: 'row',

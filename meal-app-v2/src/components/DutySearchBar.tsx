@@ -235,20 +235,48 @@ export default function DutySearchBar({
             </Text>
           )}
 
-          {/* ===== バー表示 ===== */}
-          {pattern && (
-            <View style={styles.barRow}>
-              {pattern.map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.bar,
-                    i === cycleInfo?.index && styles.barActive
-                  ]}
-                />
-              ))}
-            </View>
-          )}
+         {/* ===== バー表示 ===== */}
+{pattern && (
+  <>
+    <View style={styles.barRow}>
+      {Array.from({ length: 20 }, (_, i) => {
+        const isUsed = i < pattern.length;
+        const isActive = i === cycleInfo?.index;
+
+        return (
+          <View
+            key={i}
+            style={[
+              styles.bar,
+              isUsed && styles.barFilled,
+              !isUsed && styles.barEmpty,
+              isActive && styles.barActive,
+            ]}
+          />
+        );
+      }).slice(0, 10)}
+    </View>
+
+    <View style={styles.barRow}>
+      {Array.from({ length: 20 }, (_, i) => {
+        const isUsed = i < pattern.length;
+        const isActive = i === cycleInfo?.index;
+
+        return (
+          <View
+            key={i}
+            style={[
+              styles.bar,
+              isUsed && styles.barFilled,
+              !isUsed && styles.barEmpty,
+              isActive && styles.barActive,
+            ]}
+          />
+        );
+      }).slice(10, 20)}
+    </View>
+  </>
+)}
 
           {/* ===== パターン ===== */}
           <Text style={commonStyles.section}>パターン</Text>
@@ -266,45 +294,57 @@ export default function DutySearchBar({
           {/* ===== 保存 ===== */}
           {!editMode ? (
 
-            <Pressable
-              style={commonStyles.buttonOutline}
-              onPress={()=>setEditMode(true)}
-            >
-              <Text style={commonStyles.buttonOutlineText}>
-                パターン編集
-              </Text>
-            </Pressable>
+  <Pressable
+    style={commonStyles.buttonOutline}
+    onPress={()=>setEditMode(true)}
+  >
+    <Text style={commonStyles.buttonOutlineText}>
+      パターン編集
+    </Text>
+  </Pressable>
 
-          ) : (
+) : (
 
-            <View style={commonStyles.rowBetween}>
+  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
 
-              <Pressable
-                style={commonStyles.buttonOutline}
-                onPress={()=>{
-                  setLocalPattern(pattern);
-                  setLocalBaseDate(baseDate ?? '');
-                  setEditMode(false);
-                }}
-              >
-                <Text style={commonStyles.buttonOutlineText}>
-                  キャンセル
-                </Text>
-              </Pressable>
+    <Pressable
+      style={[
+        commonStyles.buttonHalf,
+        commonStyles.buttonHalfOutline
+      ]}
+      onPress={()=>{
+        setLocalPattern(pattern);
+        setLocalBaseDate(baseDate ?? '');
+        setEditMode(false);
+      }}
+    >
+      <Text style={[
+        commonStyles.buttonHalfText,
+        commonStyles.buttonHalfTextOutline
+      ]}>
+        キャンセル
+      </Text>
+    </Pressable>
 
-              <Pressable
-                style={commonStyles.button}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                <Text style={commonStyles.buttonText}>
-                  {saving ? '保存中...' : '保存'}
-                </Text>
-              </Pressable>
+    <Pressable
+      style={[
+        commonStyles.buttonHalf,
+        commonStyles.buttonHalfPrimary
+      ]}
+      onPress={handleSave}
+      disabled={saving}
+    >
+      <Text style={[
+        commonStyles.buttonHalfText,
+        commonStyles.buttonHalfTextPrimary
+      ]}>
+        {saving ? '保存中...' : '保存'}
+      </Text>
+    </Pressable>
 
-            </View>
+  </View>
 
-          )}
+)}
 
         </View>
 
@@ -337,23 +377,28 @@ const styles = StyleSheet.create({
   },
 
   barRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginVertical: 8,
-  },
+  flexDirection: 'row',
+  marginTop: 6,
+},
 
-  bar: {
-    width: 18,
-    height: 10,
-    backgroundColor: '#90CAF9',
-    borderRadius: 3,
-  },
+bar: {
+  flex: 1,
+  height: 12,
+  borderRadius: 3,
+  marginHorizontal: 2,
+},
 
-  barActive: {
-    backgroundColor: '#1976D2',
-  },
+barFilled: {
+  backgroundColor: '#90CAF9',
+},
 
+barActive: {
+  backgroundColor: '#1976D2',
+},
+
+barEmpty: {
+  backgroundColor: 'transparent',
+},
   patternWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',

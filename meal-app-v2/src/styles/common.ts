@@ -229,4 +229,34 @@ patternWrap: {
   gap: 8,
   marginTop: 6,
 },
+
+buttonHalf: {
+  flex: 1,
+  height: 44,
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderRadius: 10,
+},
+
+buttonHalfPrimary: {
+  backgroundColor: '#1976D2',
+},
+
+buttonHalfOutline: {
+  borderWidth: 1,
+  borderColor: '#1976D2',
+},
+
+buttonHalfText: {
+  fontSize: 15,
+  fontWeight: 'bold',
+},
+
+buttonHalfTextPrimary: {
+  color: '#fff',
+},
+
+buttonHalfTextOutline: {
+  color: '#1976D2',
+},
 })
