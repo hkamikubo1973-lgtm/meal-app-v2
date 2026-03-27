@@ -99,8 +99,15 @@ export default function MealInputButtons({
     try {
       setSaving(true);
       await upsertDailyMealMemo(uuid, dutyDate, memoMap);
+
       setSaved(true);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 1500);
+
       onMealRefresh();
+
     } catch {
       Alert.alert('エラー', 'メモの保存に失敗しました');
     } finally {
@@ -153,8 +160,11 @@ export default function MealInputButtons({
         </View>
 
         {/* ===== メモ ===== */}
-        <Pressable onPress={() => setOpenMemo(v => !v)}>
-          <Text style={commonStyles.section}>
+        <Pressable
+           style={commonStyles.accordionToggle}
+           onPress={() => setOpenMemo(v => !v)}
+>
+          <Text style={commonStyles.accordionText}>
             {openMemo ? '▲ 補足メモを閉じる' : '▼ 補足メモを追加'}
           </Text>
         </Pressable>
@@ -192,7 +202,9 @@ export default function MealInputButtons({
             </Pressable>
 
             {saved && (
-              <Text style={styles.savedText}>✔ 保存済み</Text>
+              <Text style={commonStyles.savedMessage}>
+                ✓ 保存しました
+              </Text>
             )}
           </View>
         )}

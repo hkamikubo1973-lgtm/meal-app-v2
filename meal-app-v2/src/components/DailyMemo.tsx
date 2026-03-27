@@ -104,10 +104,20 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
       (data.time2 === '' || data.time2 === '00:00');
 
     if (isAllEmpty) {
-      await AsyncStorage.removeItem(storageKey);
-    } else {
-      await AsyncStorage.setItem(storageKey, JSON.stringify(data));
-    }
+  await AsyncStorage.removeItem(storageKey);
+
+       // ★ここ追加
+       setData({
+         time1: '',
+         text1: '',
+         time2: '',
+         text2: '',
+         free: '',
+       });
+
+     } else {
+       await AsyncStorage.setItem(storageKey, JSON.stringify(data));
+     }
 
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -162,22 +172,22 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
 
       {/* ===== トグル ===== */}
       <Pressable
-        onPress={() => setOpen(v => !v)}
-        style={[
-          styles.toggleWrapper,
-          hasMemo && styles.toggleActive
-        ]}
-      >
-        <Text style={commonStyles.textSub}>
-          {open
-            ? '▲ 今日の予定・メモを閉じる'
-            : '▼ 今日の予定・メモを表示'}
-        </Text>
+       onPress={() => setOpen(v => !v)}
+       style={[
+         commonStyles.accordionToggle,
+         hasMemo && styles.toggleActive
+       ]}
+     >
+       <Text style={commonStyles.accordionText}>
+         {open
+           ? '▲ 今日の予定・メモを閉じる'
+           : '▼ 今日の予定・メモを表示'}
+       </Text>
 
-        {hasMemo && !open && (
-          <Text style={styles.dot}>●</Text>
-        )}
-      </Pressable>
+       {hasMemo && !open && (
+         <Text style={styles.dot}>●</Text>
+       )}
+     </Pressable>
 
       {open && (
 
@@ -251,7 +261,7 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
           </Pressable>
 
           {saved && (
-            <Text style={styles.savedMessage}>
+            <Text style={commonStyles.savedMessage}>
               ✓ 保存しました
             </Text>
           )}

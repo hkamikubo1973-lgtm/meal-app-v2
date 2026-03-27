@@ -62,6 +62,12 @@ export default function DutySearchBar({
     cancel: '取消',
   };
 
+  const nextDuty = (type: DutyType): DutyType => {
+    const order: DutyType[] = ['work', 'ake', 'off'];
+    const idx = order.indexOf(type);
+    return order[(idx + 1) % order.length];
+  };
+
   const cycleInfo = React.useMemo(() => {
     if (!baseDate || !pattern || pattern.length === 0) return null;
 
@@ -168,10 +174,10 @@ export default function DutySearchBar({
 
       {/* ===== アコーディオン ===== */}
       <Pressable
-        style={styles.accordionToggle}
+        style={commonStyles.accordionToggle}
         onPress={() => setOpenCycle(v => !v)}
       >
-        <Text style={commonStyles.textSub}>
+        <Text style={commonStyles.accordionText}>
           {openCycle
             ? '▲ 乗務サイクル設定・勤務修正を閉じる'
             : '▼ 乗務サイクル設定・勤務修正'}
@@ -212,6 +218,34 @@ export default function DutySearchBar({
           {/* ===== サイクル ===== */}
           <Text style={commonStyles.section}>サイクル設定</Text>
 
+     {editMode && localPattern && (
+       <View style={styles.patternAdjustRow}>
+
+        <Pressable
+           style={commonStyles.buttonOutlineSmall}
+           onPress={() => {
+             if (localPattern.length <= 1) return;
+             setLocalPattern(localPattern.slice(0, -1));
+           }}
+         >
+           <Text style={commonStyles.buttonOutlineText}>−1日</Text>
+         </Pressable>
+
+         <Text style={commonStyles.textSub}>
+           {localPattern.length}日サイクル
+         </Text>
+
+         <Pressable
+           style={commonStyles.buttonOutlineSmall}
+           onPress={() => {
+             setLocalPattern([...localPattern, 'work']);
+           }}
+         >
+           <Text style={commonStyles.buttonOutlineText}>＋1日</Text>
+         </Pressable>
+
+       </View>
+     )}
           <Text style={commonStyles.textSub}>
             基準日（サイクル初日）
           </Text>
@@ -282,14 +316,29 @@ export default function DutySearchBar({
           <Text style={commonStyles.section}>パターン</Text>
 
           <View style={styles.patternWrap}>
-            {pattern?.map((p, i) => (
-              <View key={i} style={commonStyles.chip}>
-                <Text style={commonStyles.chipText}>
-                  {DUTY_LABEL[p]}
-                </Text>
-              </View>
-            ))}
-          </View>
+       {localPattern?.map((p, i) => (
+
+         <Pressable
+           key={i}
+           style={commonStyles.chip}
+           onPress={() => {
+             if (!editMode) return;
+
+             const next = nextDuty(p);
+
+             const updated = [...localPattern];
+             updated[i] = next;
+
+             setLocalPattern(updated);
+           }}
+         >
+           <Text style={commonStyles.chipText}>
+             {DUTY_LABEL[p]}
+           </Text>
+         </Pressable>
+
+       ))}
+     </View>
 
           {/* ===== 保存 ===== */}
           {!editMode ? (
@@ -405,5 +454,11 @@ barEmpty: {
     gap: 8,
     marginTop: 6,
   },
-
+patternAdjustRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginTop: 8,
+  marginBottom: 8,
+},
 });

@@ -323,9 +323,12 @@ export default function TodayTotal({
 
         </View>
 
-        <Pressable onPress={() => setOpen(v => !v)}>
-          <Text style={styles.toggle}>
-            {open ? '▲ 詳細を閉じる' : '▼ 詳細・売上リセット'}
+        <Pressable
+          style={commonStyles.accordionToggle}
+          onPress={() => setOpen(v => !v)}
+        >
+          <Text style={commonStyles.accordionText}>
+          {open ? '▲ 詳細・売上リセットを閉じる' : '▼ 詳細・売上リセット'}
           </Text>
         </Pressable>
 

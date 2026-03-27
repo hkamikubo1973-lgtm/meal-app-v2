@@ -259,4 +259,27 @@ buttonHalfTextPrimary: {
 buttonHalfTextOutline: {
   color: '#1976D2',
 },
+buttonOutlineSmall: {
+  borderWidth: 1,
+  borderColor: '#1976D2',
+  borderRadius: 8,
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+},
+accordionToggle: {
+  marginTop: 12,
+  paddingVertical: 6,
+},
+
+accordionText: {
+  fontSize: 13,
+  fontWeight: '300',
+  color: '#1976D2',
+},
+savedMessage: {
+  textAlign: 'center',
+  marginTop: 6,
+  color: '#4CAF50',
+  fontSize: 13,
+},
 })
