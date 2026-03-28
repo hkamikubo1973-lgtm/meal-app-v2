@@ -33,6 +33,7 @@ import MealInputButtons from './src/components/MealInputButtons';
 import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
+import LogsScreen from './src/components/LogsScreen';
 
 
 const DUTY_LABEL: Record<DutyType, string> = {
@@ -303,6 +304,9 @@ const handleResetOverride = async () => {
             dutyDate={dutyDate}
             refreshKey={refreshKey}
           />
+
+
+          <LogsScreen />
 
         </ScrollView>
 

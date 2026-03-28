@@ -10,6 +10,14 @@ import {
 
 import { DutyType } from '../types/DutyType';
 import { commonStyles } from '../styles/common';
+import { insertLog } from '../database/logs';
+
+const getNewDate = (dateStr: string, diff: number) => {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + diff);
+
+  return d.toISOString().slice(0, 10);
+};
 
 type Props = {
   uuid: string;
@@ -31,6 +39,7 @@ type Props = {
 };
 
 export default function DutySearchBar({
+  uuid,
   dutyDate,
   dutyType,
   jumpText,
@@ -148,12 +157,22 @@ export default function DutySearchBar({
       <View style={[commonStyles.rowBetween, { marginTop: 12 }]}>
 
         <Pressable
-          style={commonStyles.buttonOutline}
-          onPress={() => changeDateBy(-1)}
-          onLongPress={() => changeDateBy(-30,'long-prev')}
-        >
-          <Text style={commonStyles.buttonOutlineText}>◀ 前日</Text>
-        </Pressable>
+  style={commonStyles.buttonOutline}
+  onPress={() => {
+  const newDate = getNewDate(dutyDate, -1);
+
+  changeDateBy(-1);
+
+  insertLog(uuid, 'move_date', {
+    diff: -1,
+    from: dutyDate,
+    to: newDate
+  });
+}}
+  onLongPress={() => changeDateBy(-30, 'long-prev')}
+>
+  <Text style={commonStyles.buttonOutlineText}>◀ 前日</Text>
+</Pressable>
 
         <View style={styles.center}>
           <Text style={styles.date}>{dutyDate}</Text>
@@ -163,12 +182,22 @@ export default function DutySearchBar({
         </View>
 
         <Pressable
-          style={commonStyles.buttonOutline}
-          onPress={() => changeDateBy(1)}
-          onLongPress={() => changeDateBy(30,'long-next')}
-        >
-          <Text style={commonStyles.buttonOutlineText}>翌日 ▶</Text>
-        </Pressable>
+  style={commonStyles.buttonOutline}
+  onPress={() => {
+  const newDate = getNewDate(dutyDate, 1);
+
+  changeDateBy(1);
+
+  insertLog(uuid, 'move_date', {
+    diff: 1,
+    from: dutyDate,
+    to: newDate
+  });
+}}
+  onLongPress={() => changeDateBy(30, 'long-next')}
+>
+  <Text style={commonStyles.buttonOutlineText}>翌日 ▶</Text>
+</Pressable>
 
       </View>
 

@@ -267,8 +267,9 @@ buttonOutlineSmall: {
   paddingHorizontal: 12,
 },
 accordionToggle: {
-  marginTop: 12,
-  paddingVertical: 6,
+  marginTop: 4,
+  paddingVertical: 4,
+  paddingHorizontal: 12,
 },
 
 accordionText: {

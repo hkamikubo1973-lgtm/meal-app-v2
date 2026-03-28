@@ -82,7 +82,21 @@ export const getDb = async () => {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_override_unique
     ON duty_overrides(uuid, duty_date);
 
+    /* ログ */
+
+    CREATE TABLE IF NOT EXISTS app_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL,
+      action TEXT NOT NULL,
+      detail TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+CREATE INDEX IF NOT EXISTS idx_logs_uuid
+ON app_logs(uuid);
+
     `);
+
   }
 
   return db;

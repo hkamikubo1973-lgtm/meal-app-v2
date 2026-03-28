@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 
 import { commonStyles } from '../styles/common';
+import { insertLog } from '../database/logs';
 
 type Props = {
   uuid: string;
@@ -39,6 +40,18 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
     text2: '',
     free: '',
   });
+
+  const hasSchedule =
+    (typeof data?.time1 === 'string' && data.time1 !== '' && data.time1 !== '00:00') ||
+    (typeof data?.time2 === 'string' && data.time2 !== '' && data.time2 !== '00:00');
+
+  const hasMemoOnly =
+    !hasSchedule &&
+    (
+    (typeof data?.text1 === 'string' && data.text1.trim() !== '') ||
+    (typeof data?.text2 === 'string' && data.text2.trim() !== '') ||
+    (typeof data?.free === 'string' && data.free.trim() !== '')
+  );
 
   const storageKey = `memo_${uuid}_${dutyDate}`;
 
@@ -117,6 +130,7 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
 
      } else {
        await AsyncStorage.setItem(storageKey, JSON.stringify(data));
+       await insertLog(uuid, 'save_memo', data);
      }
 
     setSaved(true);
@@ -132,8 +146,13 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
     onChange: (v: string) => void;
   }) => {
 
-    const h = value?.split(':')[0] || '00';
-    const m = value?.split(':')[1] || '00';
+    const h = typeof value === 'string' && value.includes(':')
+     ? value.split(':')[0]
+     : '00';
+
+    const m = typeof value === 'string' && value.includes(':')
+     ? value.split(':')[1]
+     : '00';
 
     return (
       <View style={styles.timeRow}>
@@ -175,8 +194,9 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
        onPress={() => setOpen(v => !v)}
        style={[
          commonStyles.accordionToggle,
+         styles.row,
          hasMemo && styles.toggleActive
-       ]}
+      ]}
      >
        <Text style={commonStyles.accordionText}>
          {open
@@ -184,10 +204,15 @@ export default function DailyMemo({ uuid, dutyDate }: Props) {
            : '▼ 今日の予定・メモを表示'}
        </Text>
 
-       {hasMemo && !open && (
-         <Text style={styles.dot}>●</Text>
+       {!open && hasSchedule && (
+        <Text style={styles.dotRed}>●</Text>
        )}
-     </Pressable>
+
+       {!open && !hasSchedule && hasMemoOnly && (
+        <Text style={styles.dotBlue}>●</Text>
+       )}
+
+       </Pressable>
 
       {open && (
 
@@ -288,11 +313,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
   },
 
-  dot: {
-    color: '#1976D2',
-    fontWeight: 'bold',
-  },
-
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -321,4 +341,24 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
   },
 
+  row: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between', // ←これ重要
+},
+
+dot: {
+  color: '#1976D2',
+  fontSize: 12,
+},
+
+dotRed: {
+  color: '#E57373',
+  fontSize: 12,
+},
+
+dotBlue: {
+  color: '#1976D2',
+  fontSize: 12,
+},
 });

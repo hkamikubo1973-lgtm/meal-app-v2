@@ -16,6 +16,7 @@ import {
   insertDailyRecord,
   BusinessType,
 } from '../database/database';
+import { insertLog } from '../database/logs';
 
 type Props = {
   uuid: string;
@@ -64,6 +65,11 @@ export default function RecordInputForm({
         amount,
         businessType
       );
+
+      await insertLog(uuid, 'save_sales', {
+        amount,
+        businessType
+      });
 
       setAmountText('');
       setBusinessType('normal');

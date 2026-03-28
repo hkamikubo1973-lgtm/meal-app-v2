@@ -24,6 +24,7 @@ import { ActionCard } from './ActionCard'
 import { getTodayActionCard } from '../utils/getTodayActionCard'
 
 import { commonStyles } from '../styles/common'
+import { insertLog } from '../database/logs';
 
 /* =====================
    定数
