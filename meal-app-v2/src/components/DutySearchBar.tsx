@@ -298,47 +298,66 @@ export default function DutySearchBar({
             </Text>
           )}
 
-         {/* ===== バー表示 ===== */}
+         {/* ===== 表示切替 ===== */}
 {pattern && (
-  <>
-    <View style={styles.barRow}>
-      {Array.from({ length: 20 }, (_, i) => {
-        const isUsed = i < pattern.length;
-        const isActive = i === cycleInfo?.index;
 
-        return (
-          <View
-            key={i}
-            style={[
-              styles.bar,
-              isUsed && styles.barFilled,
-              !isUsed && styles.barEmpty,
-              isActive && styles.barActive,
-            ]}
-          />
-        );
-      }).slice(0, 10)}
+  pattern.length <= 20 ? (
+
+    // ===== バー表示（そのまま）=====
+    <>
+      <View style={styles.barRow}>
+        {Array.from({ length: 20 }, (_, i) => {
+          const isUsed = i < pattern.length;
+          const isActive = i === cycleInfo?.index;
+
+          return (
+            <View
+              key={i}
+              style={[
+                styles.bar,
+                isUsed && styles.barFilled,
+                !isUsed && styles.barEmpty,
+                isActive && styles.barActive,
+              ]}
+            />
+          );
+        }).slice(0, 10)}
+      </View>
+
+      <View style={styles.barRow}>
+        {Array.from({ length: 20 }, (_, i) => {
+          const isUsed = i < pattern.length;
+          const isActive = i === cycleInfo?.index;
+
+          return (
+            <View
+              key={i}
+              style={[
+                styles.bar,
+                isUsed && styles.barFilled,
+                !isUsed && styles.barEmpty,
+                isActive && styles.barActive,
+              ]}
+            />
+          );
+        }).slice(10, 20)}
+      </View>
+    </>
+
+  ) : (
+
+    // ===== 長期（テキスト表示）=====
+    <View style={styles.cycleInfoBox}>
+      <Text style={styles.cycleText}>
+        {pattern.length}日サイクル
+      </Text>
+      <Text style={styles.cycleSub}>
+        {cycleInfo ? cycleInfo.index + 1 : '-'}日目
+      </Text>
     </View>
 
-    <View style={styles.barRow}>
-      {Array.from({ length: 20 }, (_, i) => {
-        const isUsed = i < pattern.length;
-        const isActive = i === cycleInfo?.index;
+  )
 
-        return (
-          <View
-            key={i}
-            style={[
-              styles.bar,
-              isUsed && styles.barFilled,
-              !isUsed && styles.barEmpty,
-              isActive && styles.barActive,
-            ]}
-          />
-        );
-      }).slice(10, 20)}
-    </View>
-  </>
 )}
 
           {/* ===== パターン ===== */}
@@ -477,17 +496,34 @@ barActive: {
 barEmpty: {
   backgroundColor: 'transparent',
 },
+
   patternWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 6,
   },
-patternAdjustRow: {
+
+  patternAdjustRow: {
   flexDirection: 'row',
   justifyContent: 'space-between',
   alignItems: 'center',
   marginTop: 8,
   marginBottom: 8,
 },
+
+cycleInfoBox: {
+  paddingVertical: 6,
+},
+
+cycleText: {
+  fontSize: 14,
+  fontWeight: '600',
+},
+
+cycleSub: {
+  fontSize: 12,
+  color: '#666',
+},
+
 });

@@ -49,6 +49,8 @@ const DUTY_LABEL: Record<DutyType, string> = {
 
 export default function App() {
 
+  const DEBUG = true;
+
   const [uuid, setUuid] = useState<string>('');
   const [dutyDate, setDutyDate] = useState<string>('');
   const [dutyType, setDutyType] = useState<DutyType | null>(null);
@@ -306,7 +308,8 @@ const handleResetOverride = async () => {
           />
 
 
-          <LogsScreen />
+          {DEBUG && <LogsScreen />}
+          
 
         </ScrollView>
 

@@ -108,9 +108,7 @@ export const exportRecordsCsv = async (
     FileSystem.documentDirectory +
     `daily_records${suffix}.csv`;
 
-  await FileSystem.writeAsStringAsync(fileUri, csv, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  await FileSystem.writeAsStringAsync(fileUri, csv);
 
   await Sharing.shareAsync(fileUri);
 };
