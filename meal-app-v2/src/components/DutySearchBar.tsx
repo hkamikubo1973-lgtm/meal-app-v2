@@ -158,17 +158,17 @@ export default function DutySearchBar({
 
         <Pressable
   style={commonStyles.buttonOutline}
-  onPress={() => {
-  const newDate = getNewDate(dutyDate, -1);
+      onPress={() => {
+      const newDate = getNewDate(dutyDate, -1);
 
-  changeDateBy(-1);
+      changeDateBy(-1);
 
-  insertLog(uuid, 'move_date', {
-    diff: -1,
-    from: dutyDate,
-    to: newDate
-  });
-}}
+      insertLog(uuid, 'move_date', {
+        diff: -1,
+        from: dutyDate,
+        to: newDate
+      });
+    }}
   onLongPress={() => changeDateBy(-30, 'long-prev')}
 >
   <Text style={commonStyles.buttonOutlineText}>◀ 前日</Text>
@@ -183,17 +183,17 @@ export default function DutySearchBar({
 
         <Pressable
   style={commonStyles.buttonOutline}
-  onPress={() => {
-  const newDate = getNewDate(dutyDate, 1);
+      onPress={() => {
+      const newDate = getNewDate(dutyDate, 1);
 
-  changeDateBy(1);
+      changeDateBy(1);
 
-  insertLog(uuid, 'move_date', {
-    diff: 1,
-    from: dutyDate,
-    to: newDate
-  });
-}}
+      insertLog(uuid, 'move_date', {
+        diff: 1,
+        from: dutyDate,
+        to: newDate
+      });
+    }}
   onLongPress={() => changeDateBy(30, 'long-next')}
 >
   <Text style={commonStyles.buttonOutlineText}>翌日 ▶</Text>
