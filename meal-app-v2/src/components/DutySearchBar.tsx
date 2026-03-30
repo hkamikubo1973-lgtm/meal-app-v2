@@ -131,24 +131,29 @@ export default function DutySearchBar({
     onChange(newDate, jumpType as any);
   };
 
-  const isValidDate = (value: string) => {
-    return /^\d{4}-\d{2}-\d{2}$/.test(value);
-  };
-
+  
   const handleSave = async () => {
     if (!localPattern) return;
 
-    if (!isValidDate(localBaseDate)) {
-      Alert.alert('基準日は YYYY-MM-DD 形式で入力してください');
+    if (!localBaseDate) {
+      Alert.alert('基準日を選択してください');
       return;
     }
 
     try {
       setSaving(true);
+
+      console.log('保存開始', localBaseDate, localPattern);
+
       await onSavePattern(localBaseDate, localPattern);
+
+      console.log('保存成功');
+
       setEditMode(false);
       Alert.alert('保存しました');
-    } catch {
+
+    } catch (e) {
+      console.log('保存エラー', e);
       Alert.alert('保存失敗');
     } finally {
       setSaving(false);

@@ -11,7 +11,6 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
-  View,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,10 +20,9 @@ import * as Crypto from 'expo-crypto';
 import { ensureDailyMealMemoTable } from './src/database/mealRecords';
 import { getDutyType } from './src/utils/getDutyType';
 import { DutyType } from './src/types/DutyType';
-import { getCycleSettings } from './src/database/cycleSettings';
-import { saveCycleSettings } from './src/database/cycleSettings';
-import { setDutyOverride } from './src/database/dutyOverride';
-import { clearDutyOverride } from './src/database/dutyOverride';
+import { getCycleSettings, saveCycleSettings } from './src/database/cycleSettings';
+import { setDutyOverride, clearDutyOverride } from './src/database/dutyOverride';
+
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
 import TodayTotal from './src/components/TodayTotal';
@@ -34,7 +32,6 @@ import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
 import LogsScreen from './src/components/LogsScreen';
-
 
 const DUTY_LABEL: Record<DutyType, string> = {
   work: '乗務',
@@ -51,96 +48,69 @@ export default function App() {
 
   const DEBUG = true;
 
+  const [booting, setBooting] = useState(true);
+
   const [uuid, setUuid] = useState<string>('');
   const [dutyDate, setDutyDate] = useState<string>('');
   const [dutyType, setDutyType] = useState<DutyType | null>(null);
   const [refreshKey, setRefreshKey] = useState<number>(0);
-  const [booting, setBooting] = useState<boolean>(true);
+
   const [jumpText, setJumpText] = useState<string | null>(null);
   const [baseDate, setBaseDate] = useState<string | null>(null);
   const [pattern, setPattern] = useState<DutyType[] | null>(null);
 
   /* ===============================
-     初期化
+     初期化（ここ1本に統一）
   =============================== */
-
   useEffect(() => {
 
     const init = async () => {
 
-       try {
+      try {
 
-         await ensureDailyMealMemoTable();
+        // DBテーブル生成
+        await ensureDailyMealMemoTable();
 
-         let stored = await AsyncStorage.getItem('uuid');
+        // UUID生成 or 取得
+        let stored = await AsyncStorage.getItem('uuid');
 
-         if (!stored) {
-           stored = Crypto.randomUUID();
-           await AsyncStorage.setItem('uuid', stored);
-         }
+        if (!stored) {
+          stored = Crypto.randomUUID();
+          await AsyncStorage.setItem('uuid', stored);
+        }
 
-         setUuid(stored);
+        setUuid(stored);
 
-         const today = new Date().toISOString().slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10);
+        setDutyDate(today);
 
-         setDutyDate(today);
+        // サイクル設定読み込み
+        const settings = await getCycleSettings(stored);
 
-          // 🔥 ここ追加（超重要）
-         const settings = await getCycleSettings(stored);
+        if (settings) {
+          setBaseDate(settings.base_date);
+          setPattern(JSON.parse(settings.pattern_json));
+        }
 
-         if (settings) {
-           setBaseDate(settings.base_date);
-           setPattern(JSON.parse(settings.pattern_json));
-         }
+      } catch (e) {
 
-       } catch (e) {
+        console.log('initエラー', e);
 
-         console.log('initエラー', e);
+      } finally {
 
-       } finally {
-
-         setBooting(false);
-
-       }
-
-     };
-
-    init();
-
-  }, []);
-
-
-  /* ==========================
-     基準日読み込み
-  ========================== */
-
-  useEffect(() => {
-
-    const loadBaseDate = async () => {
-
-      if (!uuid) return;
-
-      const settings = await getCycleSettings(uuid);
-
-      if (settings) {
-
-        setBaseDate(settings.base_date);
-
-        setPattern(JSON.parse(settings.pattern_json));
+        setBooting(false);
 
       }
 
     };
 
-    loadBaseDate();
+    init();
 
-  }, [uuid]);
-
+  }, []);
 
   /* ===============================
      dutyType取得
   =============================== */
-
   useEffect(() => {
 
     const loadDutyType = async () => {
@@ -157,65 +127,50 @@ export default function App() {
 
   }, [uuid, dutyDate]);
 
-
   const refreshAll = () => setRefreshKey(v => v + 1);
 
-
   const showJump = (text: string) => {
-
     setJumpText(text);
-
     setTimeout(() => setJumpText(null), 800);
-
   };
 
-
   /* ===============================
-     勤務修正保存
+     勤務修正
   =============================== */
-
   const handleOverride = async (type: DutyType) => {
 
-  await setDutyOverride(uuid, dutyDate, type);
+    await setDutyOverride(uuid, dutyDate, type);
 
-  const newType = await getDutyType(uuid, dutyDate);
-  setDutyType(newType);
+    const newType = await getDutyType(uuid, dutyDate);
+    setDutyType(newType);
 
-  refreshAll();
+    refreshAll();
+  };
 
-};
+  const handleResetOverride = async () => {
 
-/* ===============================
-   勤務修正リセット
-=============================== */
+    await clearDutyOverride(uuid, dutyDate);
 
-const handleResetOverride = async () => {
+    const newType = await getDutyType(uuid, dutyDate);
+    setDutyType(newType);
 
-  await clearDutyOverride(uuid, dutyDate);
+    refreshAll();
+  };
 
-  const newType = await getDutyType(uuid, dutyDate);
-
-  setDutyType(newType);
-
-  refreshAll();
-
-};
-
+  /* ===============================
+     起動ガード
+  =============================== */
   if (booting || !uuid || !dutyDate) {
-
     return (
-
       <SafeAreaView style={styles.safeArea}>
-
         <Text>起動中...</Text>
-
       </SafeAreaView>
-
     );
-
   }
 
-
+  /* ===============================
+     UI
+  =============================== */
   return (
 
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -225,13 +180,12 @@ const handleResetOverride = async () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
 
-        
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 16 }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-     
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 16 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+
           <DutySearchBar
             uuid={uuid}
             dutyDate={dutyDate}
@@ -239,40 +193,22 @@ const handleResetOverride = async () => {
             jumpText={jumpText}
             baseDate={baseDate}
             pattern={pattern}
-
             onChange={(newDate, jumpType) => {
-
               setDutyDate(newDate);
-
               refreshAll();
-
               if (jumpType === 'long-next') showJump('＋30');
               if (jumpType === 'long-prev') showJump('－30');
-
             }}
-
             onSavePattern={async (newBaseDate, newPattern) => {
-
-              await saveCycleSettings(
-                uuid,
-                newBaseDate,
-                newPattern,
-                'cycle'
-              );
-
+              await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
               setPattern(newPattern);
-
               setBaseDate(newBaseDate);
-
             }}
-
             onSetOverride={handleOverride}
             onResetOverride={handleResetOverride}
           />
 
-
           <DailyMemo uuid={uuid} dutyDate={dutyDate} />
-
 
           <TodayTotal
             uuid={uuid}
@@ -281,13 +217,11 @@ const handleResetOverride = async () => {
             onRefresh={refreshAll}
           />
 
-
           <RecordInputForm
             uuid={uuid}
             dutyDate={dutyDate}
             onSaved={refreshAll}
           />
-
 
           <MealInputButtons
             uuid={uuid}
@@ -295,13 +229,11 @@ const handleResetOverride = async () => {
             onMealRefresh={refreshAll}
           />
 
-
           <DailyMealSummary
             uuid={uuid}
             dutyDate={dutyDate}
             refreshKey={refreshKey}
           />
-
 
           <TodayTimeline
             uuid={uuid}
@@ -309,41 +241,25 @@ const handleResetOverride = async () => {
             refreshKey={refreshKey}
           />
 
-
           <TodayRecordList
             uuid={uuid}
             dutyDate={dutyDate}
             refreshKey={refreshKey}
           />
 
-
           {DEBUG && <LogsScreen />}
-          
 
         </ScrollView>
 
-        
       </KeyboardAvoidingView>
 
     </SafeAreaView>
-
   );
-
 }
 
-
 const styles = StyleSheet.create({
-
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-
-  container: {
-   flexGrow: 1,
-  },
-
-  scrollContent: {
-  paddingBottom: 40,
   },
 });
