@@ -22,6 +22,7 @@ import { getDutyType } from './src/utils/getDutyType';
 import { DutyType } from './src/types/DutyType';
 import { getCycleSettings, saveCycleSettings } from './src/database/cycleSettings';
 import { setDutyOverride, clearDutyOverride } from './src/database/dutyOverride';
+import { initDatabase } from './src/database/database';
 
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
@@ -68,6 +69,7 @@ export default function App() {
 
       try {
 
+        await initDatabase();
         // DBテーブル生成
         await ensureDailyMealMemoTable();
 
