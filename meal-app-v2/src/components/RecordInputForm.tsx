@@ -20,6 +20,7 @@ import {
 } from '../database/database';
 
 import { insertLog } from '../database/logs';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type Props = {
   uuid: string;

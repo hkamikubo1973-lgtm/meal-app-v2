@@ -68,33 +68,42 @@ export default function App() {
 
     const init = async () => {
 
-      try {
+       try {
 
-        await ensureDailyMealMemoTable();
+         await ensureDailyMealMemoTable();
 
-        let stored = await AsyncStorage.getItem('uuid');
+         let stored = await AsyncStorage.getItem('uuid');
 
-        if (!stored) {
+         if (!stored) {
+           stored = Crypto.randomUUID();
+           await AsyncStorage.setItem('uuid', stored);
+         }
 
-          stored = Crypto.randomUUID();
+         setUuid(stored);
 
-          await AsyncStorage.setItem('uuid', stored);
+         const today = new Date().toISOString().slice(0, 10);
 
-        }
+         setDutyDate(today);
 
-        setUuid(stored);
+          // 🔥 ここ追加（超重要）
+         const settings = await getCycleSettings(stored);
 
-        const today = new Date().toISOString().slice(0, 10);
+         if (settings) {
+           setBaseDate(settings.base_date);
+           setPattern(JSON.parse(settings.pattern_json));
+         }
 
-        setDutyDate(today);
+       } catch (e) {
 
-      } finally {
+         console.log('initエラー', e);
 
-        setBooting(false);
+       } finally {
 
-      }
+         setBooting(false);
 
-    };
+       }
+
+     };
 
     init();
 

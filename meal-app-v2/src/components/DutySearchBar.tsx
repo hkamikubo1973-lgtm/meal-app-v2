@@ -6,11 +6,13 @@ import {
   StyleSheet,
   TextInput,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 
 import { DutyType } from '../types/DutyType';
 import { commonStyles } from '../styles/common';
 import { insertLog } from '../database/logs';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const getNewDate = (dateStr: string, diff: number) => {
   const d = new Date(dateStr);
@@ -56,8 +58,19 @@ export default function DutySearchBar({
   const [localPattern, setLocalPattern] = useState<DutyType[] | null>(pattern);
   const [localBaseDate, setLocalBaseDate] = useState(baseDate ?? '');
   const [saving, setSaving] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  useEffect(() => setLocalPattern(pattern), [pattern]);
+  useEffect(() => {
+
+     if (!pattern) {
+       // 🔥 初回（未設定）の救済
+       setLocalPattern(['work', 'ake', 'off']);
+     } else {
+       setLocalPattern(pattern);
+     }
+
+  }, [pattern]);
+
   useEffect(() => setLocalBaseDate(baseDate ?? ''), [baseDate]);
 
   const DUTY_LABEL: Record<DutyType, string> = {
@@ -284,12 +297,36 @@ export default function DutySearchBar({
               {localBaseDate || '未設定'}
             </Text>
           ) : (
-            <TextInput
-              value={localBaseDate}
-              onChangeText={setLocalBaseDate}
-              style={commonStyles.input}
-              placeholder="YYYY-MM-DD"
-            />
+            <View>
+              <TouchableOpacity
+                style={commonStyles.input}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ fontSize: 16 }}>
+                  {localBaseDate || '日付を選択'}
+                </Text>
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={
+                    localBaseDate
+                      ? new Date(localBaseDate)
+                      : new Date()
+                  }
+                  mode="date"
+                  display="default"
+                  onChange={(event, date) => {
+                    setShowDatePicker(false);
+
+                    if (date) {
+                      const formatted = date.toISOString().slice(0, 10);
+                      setLocalBaseDate(formatted);
+                    }
+                  }}
+                />
+              )}
+            </View>
           )}
 
           {cycleInfo && (
@@ -526,4 +563,12 @@ cycleSub: {
   color: '#666',
 },
 
+dateInput: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 6,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  backgroundColor: '#fff',
+},
 });
