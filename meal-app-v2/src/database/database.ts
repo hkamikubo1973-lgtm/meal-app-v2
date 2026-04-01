@@ -43,9 +43,9 @@ export const getDb = async () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       uuid TEXT NOT NULL,
       duty_date TEXT NOT NULL,
-      meal_type TEXT NOT NULL,
-      meal_text TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      meal_label TEXT,
+      timing TEXT,
+      created_at TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_meal_uuid_date
@@ -414,4 +414,40 @@ export const getDutyOverride = async (
     `,
     [uuid, dutyDate]
   );
+};
+export const initDatabase = async () => {
+  const db = await getDb();
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS cycle_settings (
+      uuid TEXT PRIMARY KEY,
+      base_date TEXT,
+      pattern_json TEXT,
+      updated_at TEXT
+    );
+  `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS daily_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT,
+      duty_date TEXT,
+      sales INTEGER,
+      business_type TEXT,
+      weather TEXT,
+      created_at TEXT
+    );
+  `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS meal_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT,
+      duty_date TEXT,
+      meal_label TEXT,
+      memo TEXT,
+      created_at TEXT
+    );
+  `);
+
 };

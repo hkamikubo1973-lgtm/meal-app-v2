@@ -55,10 +55,12 @@ export default function DutySearchBar({
 
   const [openCycle, setOpenCycle] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [localPattern, setLocalPattern] = useState<DutyType[] | null>(pattern);
   const [localBaseDate, setLocalBaseDate] = useState(baseDate ?? '');
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [localPattern, setLocalPattern] = useState<DutyType[]>(
+    pattern ?? ['work', 'ake', 'off']
+  );
 
   useEffect(() => {
 
