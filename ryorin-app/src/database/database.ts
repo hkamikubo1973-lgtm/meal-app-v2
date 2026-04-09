@@ -450,4 +450,15 @@ export const initDatabase = async () => {
     );
   `);
 
-};
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS area_records (
+      uuid TEXT NOT NULL,
+      duty_date TEXT NOT NULL,
+      time_zone TEXT NOT NULL,
+      slot_index INTEGER NOT NULL,
+      area_name TEXT,
+      created_at TEXT,
+      PRIMARY KEY (uuid, duty_date, time_zone, slot_index)
+    );
+  `);
+  };

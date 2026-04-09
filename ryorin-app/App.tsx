@@ -11,6 +11,7 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
+  View,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +34,17 @@ import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
 import LogsScreen from './src/components/LogsScreen';
+
+/* ===============================
+   🔽 バナーコンポーネント（ここが重要）
+=============================== */
+const HeaderBanner = () => {
+  return (
+    <View style={styles.banner}>
+      <Text style={styles.bannerText}>RYORIN</Text>
+    </View>
+  );
+};
 
 const DUTY_LABEL: Record<DutyType, string> = {
   work: '乗務',
@@ -61,7 +73,7 @@ export default function App() {
   const [pattern, setPattern] = useState<DutyType[] | null>(null);
 
   /* ===============================
-     初期化（ここ1本に統一）
+     初期化
   =============================== */
   useEffect(() => {
 
@@ -70,10 +82,8 @@ export default function App() {
       try {
 
         await initDatabase();
-        // DBテーブル生成
         await ensureDailyMealMemoTable();
 
-        // UUID生成 or 取得
         let stored = await AsyncStorage.getItem('uuid');
 
         if (!stored) {
@@ -86,7 +96,6 @@ export default function App() {
         const today = new Date().toISOString().slice(0, 10);
         setDutyDate(today);
 
-        // サイクル設定読み込み
         const settings = await getCycleSettings(stored);
 
         if (settings) {
@@ -120,7 +129,6 @@ export default function App() {
       if (!uuid || !dutyDate) return;
 
       const type = await getDutyType(uuid, dutyDate);
-
       setDutyType(type);
 
     };
@@ -176,6 +184,9 @@ export default function App() {
   return (
 
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+
+      {/* 🔽 バナー */}
+      <HeaderBanner />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -263,5 +274,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+
+  banner: {
+    backgroundColor: '#1976D2',
+    paddingVertical: 10,
+  },
+
+  bannerText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
