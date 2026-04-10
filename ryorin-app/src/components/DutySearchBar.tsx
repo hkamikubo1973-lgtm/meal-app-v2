@@ -61,6 +61,19 @@ export default function DutySearchBar({
   const [localPattern, setLocalPattern] = useState<DutyType[]>(
     pattern ?? ['work', 'ake', 'off']
   );
+  const getDutyColor = (type: DutyType) => {
+  switch (type) {
+    case 'work': return '#1976D2';
+    case 'ake': return '#FF9800';
+    case 'off': return '#9E9E9E';
+    case 'paid': return '#4CAF50';
+    case 'absence': return '#F44336';
+    case 'late': return '#E91E63';
+    case 'leaveEarly': return '#9C27B0';
+    case 'cancel': return '#607D8B';
+    default: return '#333';
+  }
+};
 
   useEffect(() => {
 
@@ -195,11 +208,20 @@ export default function DutySearchBar({
 </Pressable>
 
         <View style={styles.center}>
-          <Text style={styles.date}>{dutyDate}</Text>
-          <Text style={commonStyles.text}>
-            {dutyType && DUTY_LABEL[dutyType]}
-          </Text>
-        </View>
+         <Text style={styles.date}>{dutyDate}</Text>
+
+         <Text
+           style={[
+             commonStyles.text,
+             dutyType && {
+               color: getDutyColor(dutyType),
+               fontWeight: 'bold'
+             }
+           ]}
+         >
+           {dutyType && DUTY_LABEL[dutyType]}
+         </Text>
+       </View>
 
         <Pressable
   style={commonStyles.buttonOutline}

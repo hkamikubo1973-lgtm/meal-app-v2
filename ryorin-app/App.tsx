@@ -14,7 +14,12 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  SafeAreaProvider,
+  useSafeAreaInsets
+} from 'react-native-safe-area-context';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
@@ -24,6 +29,7 @@ import { DutyType } from './src/types/DutyType';
 import { getCycleSettings, saveCycleSettings } from './src/database/cycleSettings';
 import { setDutyOverride, clearDutyOverride } from './src/database/dutyOverride';
 import { initDatabase } from './src/database/database';
+import { StatusBar } from 'expo-status-bar';
 
 import DutySearchBar from './src/components/DutySearchBar';
 import DailyMemo from './src/components/DailyMemo';
@@ -36,28 +42,19 @@ import TodayRecordList from './src/components/TodayRecordList';
 import LogsScreen from './src/components/LogsScreen';
 
 /* ===============================
-   🔽 バナーコンポーネント（ここが重要）
+   🔽 バナー（SafeArea完全対応）
 =============================== */
 const HeaderBanner = () => {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.banner}>
+    <View style={[styles.banner, { paddingTop: insets.top }]}>
       <Text style={styles.bannerText}>RYORIN</Text>
     </View>
   );
 };
 
-const DUTY_LABEL: Record<DutyType, string> = {
-  work: '乗務',
-  ake: '明け',
-  off: '公休',
-  paid: '有休',
-  absence: '欠勤',
-  late: '遅刻',
-  leaveEarly: '早退',
-  cancel: '取消',
-};
-
-export default function App() {
+function App() {
 
   const DEBUG = true;
 
@@ -104,13 +101,9 @@ export default function App() {
         }
 
       } catch (e) {
-
         console.log('initエラー', e);
-
       } finally {
-
         setBooting(false);
-
       }
 
     };
@@ -179,97 +172,106 @@ export default function App() {
   }
 
   /* ===============================
-     UI
+     UI（ここが最重要修正版）
   =============================== */
   return (
 
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <>
+      {/* ★ ステータスバーを透過 */}
+      <StatusBar style="light" translucent />
 
-      {/* 🔽 バナー */}
+      {/* ★ SafeArea外に出す（超重要） */}
       <HeaderBanner />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      {/* ★ 下側だけ守る */}
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
 
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 16 }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
 
-          <DutySearchBar
-            uuid={uuid}
-            dutyDate={dutyDate}
-            dutyType={dutyType}
-            jumpText={jumpText}
-            baseDate={baseDate}
-            pattern={pattern}
-            onChange={(newDate, jumpType) => {
-              setDutyDate(newDate);
-              refreshAll();
-              if (jumpType === 'long-next') showJump('＋30');
-              if (jumpType === 'long-prev') showJump('－30');
-            }}
-            onSavePattern={async (newBaseDate, newPattern) => {
-              await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
-              setPattern(newPattern);
-              setBaseDate(newBaseDate);
-            }}
-            onSetOverride={handleOverride}
-            onResetOverride={handleResetOverride}
-          />
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 16 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
 
-          <DailyMemo uuid={uuid} dutyDate={dutyDate} />
+            <DutySearchBar
+              uuid={uuid}
+              dutyDate={dutyDate}
+              dutyType={dutyType}
+              jumpText={jumpText}
+              baseDate={baseDate}
+              pattern={pattern}
+              onChange={(newDate, jumpType) => {
+                setDutyDate(newDate);
+                refreshAll();
+                if (jumpType === 'long-next') showJump('＋30');
+                if (jumpType === 'long-prev') showJump('－30');
+              }}
+              onSavePattern={async (newBaseDate, newPattern) => {
+                await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
+                setPattern(newPattern);
+                setBaseDate(newBaseDate);
+              }}
+              onSetOverride={handleOverride}
+              onResetOverride={handleResetOverride}
+            />
 
-          <TodayTotal
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-            onRefresh={refreshAll}
-          />
+            <DailyMemo uuid={uuid} dutyDate={dutyDate} />
 
-          <RecordInputForm
-            uuid={uuid}
-            dutyDate={dutyDate}
-            onSaved={refreshAll}
-          />
+            <TodayTotal
+              uuid={uuid}
+              dutyDate={dutyDate}
+              refreshKey={refreshKey}
+              onRefresh={refreshAll}
+            />
 
-          <MealInputButtons
-            uuid={uuid}
-            dutyDate={dutyDate}
-            onMealRefresh={refreshAll}
-          />
+            <RecordInputForm
+              uuid={uuid}
+              dutyDate={dutyDate}
+              onSaved={refreshAll}
+            />
 
-          <DailyMealSummary
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-          />
+            <MealInputButtons
+              uuid={uuid}
+              dutyDate={dutyDate}
+              onMealRefresh={refreshAll}
+            />
 
-          <TodayTimeline
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-          />
+            <DailyMealSummary
+              uuid={uuid}
+              dutyDate={dutyDate}
+              refreshKey={refreshKey}
+            />
 
-          <TodayRecordList
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-          />
+            <TodayTimeline
+              uuid={uuid}
+              dutyDate={dutyDate}
+              refreshKey={refreshKey}
+            />
 
-          {DEBUG && <LogsScreen />}
+            <TodayRecordList
+              uuid={uuid}
+              dutyDate={dutyDate}
+              refreshKey={refreshKey}
+            />
 
-        </ScrollView>
+            {DEBUG && <LogsScreen />}
 
-      </KeyboardAvoidingView>
+          </ScrollView>
 
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+
+      </SafeAreaView>
+    </>
   );
 }
 
+/* ===============================
+   スタイル
+=============================== */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
 
   banner: {
     backgroundColor: '#1976D2',
-    paddingVertical: 10,
+    paddingBottom: 10,
   },
 
   bannerText: {
@@ -288,3 +290,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+/* ===============================
+   ルート
+=============================== */
+export default function AppWrapper() {
+  return (
+    <SafeAreaProvider>
+      <App />
+    </SafeAreaProvider>
+  );
+}
