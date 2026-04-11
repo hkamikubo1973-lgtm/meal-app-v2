@@ -42,13 +42,20 @@ import TodayRecordList from './src/components/TodayRecordList';
 import LogsScreen from './src/components/LogsScreen';
 
 /* ===============================
-   🔽 バナー（SafeArea完全対応）
+   🔽 バナー（ステータスバー対応）
 =============================== */
 const HeaderBanner = () => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.banner, { paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.banner,
+        {
+          paddingTop: insets.top > 0 ? insets.top : 30
+        }
+      ]}
+    >
       <Text style={styles.bannerText}>RYORIN</Text>
     </View>
   );
@@ -73,11 +80,8 @@ function App() {
      初期化
   =============================== */
   useEffect(() => {
-
     const init = async () => {
-
       try {
-
         await initDatabase();
         await ensureDailyMealMemoTable();
 
@@ -105,29 +109,22 @@ function App() {
       } finally {
         setBooting(false);
       }
-
     };
 
     init();
-
   }, []);
 
   /* ===============================
      dutyType取得
   =============================== */
   useEffect(() => {
-
     const loadDutyType = async () => {
-
       if (!uuid || !dutyDate) return;
-
       const type = await getDutyType(uuid, dutyDate);
       setDutyType(type);
-
     };
 
     loadDutyType();
-
   }, [uuid, dutyDate]);
 
   const refreshAll = () => setRefreshKey(v => v + 1);
@@ -141,22 +138,16 @@ function App() {
      勤務修正
   =============================== */
   const handleOverride = async (type: DutyType) => {
-
     await setDutyOverride(uuid, dutyDate, type);
-
     const newType = await getDutyType(uuid, dutyDate);
     setDutyType(newType);
-
     refreshAll();
   };
 
   const handleResetOverride = async () => {
-
     await clearDutyOverride(uuid, dutyDate);
-
     const newType = await getDutyType(uuid, dutyDate);
     setDutyType(newType);
-
     refreshAll();
   };
 
@@ -172,18 +163,17 @@ function App() {
   }
 
   /* ===============================
-     UI（ここが最重要修正版）
+     UI（ここが今回の核心）
   =============================== */
   return (
-
     <>
       {/* ★ ステータスバーを透過 */}
       <StatusBar style="light" translucent />
 
-      {/* ★ SafeArea外に出す（超重要） */}
+      {/* ★ SafeArea外に出す */}
       <HeaderBanner />
 
-      {/* ★ 下側だけ守る */}
+      {/* ★ 下だけ守る */}
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
 
         <KeyboardAvoidingView
